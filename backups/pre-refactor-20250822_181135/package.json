@@ -1,0 +1,51 @@
+{
+	"name": "gpthost-builder-staging",
+	"version": "0.1.0",
+	"description": "GPTHost MVP Backend - Cloudflare Workers API for automatic AI component deployment",
+	"private": true,
+  "scripts": {
+		"dev": "wrangler dev --local --port 8787",
+		"dev:remote": "wrangler dev",
+		"start": "wrangler dev --local --port 8787",
+		"build": "wrangler deploy --dry-run",
+		"deploy": "wrangler deploy",
+		"deploy:staging": "wrangler deploy --env staging",
+		"test": "npm run test:unit && npm run test:integration && npm run test:e2e",
+		"test:unit": "vitest run test/unit && ./test-cleanup.sh",
+		"test:integration": "vitest run test/integration && ./test-cleanup.sh",
+		"test:e2e": "vitest run test/e2e && ./test-cleanup.sh",
+		"test:all": "vitest run && ./test-cleanup.sh",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage && ./test-cleanup.sh",
+		"test:clean": "./test-cleanup.sh",
+		"test:monitor": "./process-monitor.sh",
+		"type-check": "tsc --noEmit",
+		"cf-typegen": "wrangler types",
+		"lint": "tsc --noEmit",
+    "clean": "rm -rf dist .wrangler",
+    "normalize:urls": "bash scripts/normalize-urls.sh"
+  },
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"typescript": "^5.5.2",
+		"vitest": "~3.2.0",
+		"wrangler": "^4.28.1"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"keywords": [
+		"cloudflare-workers",
+		"ai-deployment",
+		"react-components",
+		"serverless",
+		"mvp"
+	],
+	"dependencies": {
+		"@types/jszip": "^3.4.0",
+		"jszip": "^3.10.1",
+		"@octokit/rest": "^20.0.2",
+		"playwright": "^1.41.0",
+		"puppeteer": "^21.7.0"
+	}
+}

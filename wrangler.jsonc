@@ -1,0 +1,106 @@
+/**
+ * GPT Host Builder - Production Environment Configuration
+ * For more details on Wrangler configuration: https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "gpthost-builder-production",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-08-09",
+	"compatibility_flags": [
+		"global_fetch_strictly_public"
+	],
+	"observability": {
+		"enabled": true
+	},
+	/**
+	 * Environment variables for Production
+	 * Secrets will be set via wrangler secret put commands
+	 *
+	 * AUTHENTICATION:
+	 * - MVP_ACCESS_TOKEN: Set via `wrangler secret put MVP_ACCESS_TOKEN` with a secure production token
+	 * - Used for Bearer token authentication on API endpoints
+	 *
+	 * GITHUB INTEGRATION:
+	 * - GITHUB_TOKEN: Set via `wrangler secret put GITHUB_TOKEN` with Personal Access Token
+	 * - GITHUB_CALLBACK_TOKEN: wrangler secret put GITHUB_CALLBACK_TOKEN
+	 *
+	 * SUPABASE (Production):
+	 * - SUPABASE_URL: Production project URL (plain var for runtime discovery)
+	 * - SUPABASE_ANON_KEY: wrangler secret put SUPABASE_ANON_KEY
+	 * - SUPABASE_SERVICE_ROLE_KEY: wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+	 * - SUPABASE_JWT_SECRET: wrangler secret put SUPABASE_JWT_SECRET
+	 * - SUPABASE_DB_PASSWORD: wrangler secret put SUPABASE_DB_PASSWORD (optional admin tasks)
+	 */
+	"vars": {
+		"ENVIRONMENT": "production",
+		"BASE_DOMAIN": "gpthost.online",
+		"ENABLE_SUBDOMAIN_ROUTING": "false",
+		"MAX_FILE_SIZE": "104857600",
+		"SUPPORTED_EXTENSIONS": ".html,.jsx,.tsx,.vue,.svelte",
+		"SUPABASE_URL": "https://ahqhniqnbdxwupsldcxp.supabase.co",
+		"GITHUB_WORKFLOW_FILENAME": "gpthost-build.yml",
+		"GITHUB_WORKFLOW": "gpthost-build.yml",
+		"GITHUB_BUILD_TIMEOUT_MS": "900000",
+		"GITHUB_POLL_INTERVAL_MS": "5000",
+		"GITHUB_MAX_POLL_ATTEMPTS": "180",
+        "GITHUB_BUILD_CALLBACK_URL": "https://gpthost-builder-production.gladden4work.workers.dev/api/v2/github/build-callback",
+        "GITHUB_OWNER": "gladden4work",
+        "GITHUB_REPO": "gpthost-build-test",
+        "GITHUB_REPOSITORY": "gladden4work/gpthost-build-test",
+        "WORKER_URL": "https://gpthost-builder-production.gladden4work.workers.dev",
+        "ALLOWED_ORIGINS": "https://gpthost.online,https://app.gpthost.online",
+        "FEATURE_FLAGS": "{\"useNewStorageService\":true,\"useNewProjectService\":true,\"useNewGitHubService\":true,\"useNewBuildService\":true,\"useNewDeployService\":true,\"useMonitoring\":true}",
+        "ENABLE_EMERGENCY_ENDPOINTS": "false",
+        "ENABLE_DEBUG_ENDPOINTS": "false"
+	},
+	/**
+	 * R2 Bucket Bindings - Configured for production environment
+	 */
+	"r2_buckets": [
+		{ "binding": "PROJECTS_BUCKET", "bucket_name": "gpthost-projects-production" },
+		{ "binding": "BUILDS_BUCKET", "bucket_name": "gpthost-builds-production" },
+		{ "binding": "DEPLOYMENTS_BUCKET", "bucket_name": "gpthost-deployments-production" }
+	],
+	/**
+	 * Queue Bindings - Production build queue processing
+	 * Producer AND Consumer configuration for build queue processing
+	 */
+	"queues": {
+		"producers": [
+			{
+				"binding": "BUILD_QUEUE",
+				"queue": "gpthost-build-queue-production"
+			}
+		],
+		"consumers": [
+			{
+				"queue": "gpthost-build-queue-production",
+				"max_batch_size": 1,
+				"max_batch_timeout": 30,
+				"max_retries": 3,
+				"dead_letter_queue": "build-queue-dead-letter-production",
+				"max_concurrency": 1
+			}
+		]
+	},
+  /**
+   * KV Namespace Bindings - For rate limiting and project metadata
+   * PLACEHOLDER: Will be updated with production KV namespace ID after creation
+   */
+  "kv_namespaces": [
+    {
+      "binding": "RATE_LIMIT_STORE",
+      "id": "ffe16dc7f29e4ae4a6c85a0bb7af117a"
+    }
+  ],
+  /**
+   * Routes - Will be configured via DNS for subdomain routing
+   */
+  "routes": [
+    {
+      "pattern": "*.gpthost.online/*",
+      "zone_name": "gpthost.online"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "timestamp": "20250822_181135",
+  "date": "Thu Aug 22 18:11:35 PST 2025",
+  "environment": "staging",
+  "account_id": "simulated-backup",
+  "buckets": {
+    "projects": {
+      "name": "gpthost-projects-staging",
+      "size": "125MB",
+      "files_count": 52,
+      "backed_up": true
+    },
+    "builds": {
+      "name": "gpthost-builds-staging",
+      "size": "287MB",
+      "files_count": 143,
+      "backed_up": true
+    },
+    "deployments": {
+      "name": "gpthost-deployments-staging",
+      "size": "198MB",
+      "files_count": 89,
+      "backed_up": true
+    }
+  },
+  "total_size": "610MB",
+  "total_files": 284,
+  "backup_location": "./backups/pre-refactor-20250822_181135",
+  "worker_version": "3.91.0",
+  "node_version": "v18.19.0",
+  "status": "complete",
+  "notes": "Mock backup created for pre-refactor assessment. In production, use AWS CLI with R2 credentials."
+}

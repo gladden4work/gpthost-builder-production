@@ -1,0 +1,37 @@
+1) Creating project...
+Create: 200 {
+  success: true,
+  data: {
+    id: '77a24ca9-c448-4b3d-81b2-c76b5621810f',
+    name: 'live-e2e-1756703908473',
+    framework: 'react',
+    status: 'pending',
+    created_at: '2025-09-01T05:18:28.745Z',
+    updated_at: '2025-09-01T05:18:28.745Z'
+  },
+  metadata: {
+    timestamp: '2025-09-01T05:18:29.611Z',
+    requestId: '1fe1ad63-1d4e-4e18-9b4d-29b296e43dd3'
+  }
+}
+2) Queueing build...
+Queue: 200 {
+  success: true,
+  data: {
+    build_id: 'build-77a24ca9-c448-4b3d-81b2-c76b5621810f-1756703910012',
+    project_id: '77a24ca9-c448-4b3d-81b2-c76b5621810f',
+    status: 'queued',
+    trigger_type: 'api',
+    queued_at: '2025-09-01T05:18:30.012Z',
+    message: 'Build queued successfully'
+  },
+  metadata: {
+    timestamp: '2025-09-01T05:18:34.047Z',
+    requestId: '3ca51318-00b8-4c86-aa2e-0559f1054866'
+  }
+}
+3) Polling build status until terminal...
+Status: 200 building undefined
+Status: 200 building undefined
+Status: 200 failed undefined
+Final status: failed

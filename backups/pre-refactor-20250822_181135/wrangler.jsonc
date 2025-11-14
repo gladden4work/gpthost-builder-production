@@ -1,0 +1,81 @@
+/**
+ * GPT Host Builder - Staging Environment Configuration
+ * For more details on Wrangler configuration: https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "gpthost-builder-staging",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-08-09",
+	"compatibility_flags": [
+		"global_fetch_strictly_public"
+	],
+	"observability": {
+		"enabled": true
+	},
+	/**
+	 * Environment variables for MVP staging
+	 * Secrets will be set via wrangler secret put commands
+	 * 
+	 * AUTHENTICATION (TASK-029):
+	 * - MVP_ACCESS_TOKEN: Set via `wrangler secret put MVP_ACCESS_TOKEN` with a secure token
+	 * - Used for simple Bearer token authentication on API endpoints
+	 * - Generate a secure token: openssl rand -hex 32
+	 * - Example: wrangler secret put MVP_ACCESS_TOKEN --env staging
+	 * 
+	 * GITHUB INTEGRATION (TASK-021):
+	 * - GITHUB_REPOSITORY: Set via `wrangler secret put GITHUB_REPOSITORY` with your repo (e.g., "youruser/gpthost-builds")
+	 * - GITHUB_TOKEN: Set via `wrangler secret put GITHUB_TOKEN` with Personal Access Token
+	 * - When both are configured, system uses REAL GitHub Actions builds
+	 * - Otherwise falls back to simulation mode for development
+	 * 
+	 * CRITICAL: GITHUB_REPOSITORY must be set as a secret, not a public var, for security
+	 * Example: wrangler secret put GITHUB_REPOSITORY --env staging
+	 */
+	"vars": {
+		"ENVIRONMENT": "staging",
+		"MAX_FILE_SIZE": "104857600",
+		"SUPPORTED_EXTENSIONS": ".html,.jsx,.tsx,.vue,.svelte",
+		"GITHUB_WORKFLOW_FILENAME": "gpthost-build.yml",
+		"GITHUB_BUILD_TIMEOUT_MS": "900000",
+		"GITHUB_POLL_INTERVAL_MS": "5000",
+		"GITHUB_MAX_POLL_ATTEMPTS": "180",
+		"DEPLOYMENT_DOMAIN": "pub-39b5cb8eda96466d95d0bb7c5d4d44f8.r2.dev",
+		"GITHUB_BUILD_CALLBACK_URL": "https://gpthost-builder-staging.gladden4work.workers.dev/api/github/build-callback"
+	},
+	/**
+	 * R2 Bucket Bindings - Configured for staging environment
+	 */
+	"r2_buckets": [
+		{ "binding": "PROJECTS_BUCKET", "bucket_name": "gpthost-projects-staging" },
+		{ "binding": "BUILDS_BUCKET", "bucket_name": "gpthost-builds-staging" },
+		{ "binding": "DEPLOYMENTS_BUCKET", "bucket_name": "gpthost-deployments-staging" }
+	],
+	/**
+	 * Queue Bindings - TASK-023: CF Queue to GitHub Webhook Bridge
+	 * ENABLED for TDD integration fix - connecting real build queue processing
+	 */
+	"queues": {
+		"producers": [
+			{
+				"binding": "BUILD_QUEUE",
+				"queue": "gpthost-build-queue-staging"
+			}
+		],
+		"consumers": [
+			{
+				"queue": "gpthost-build-queue-staging",
+				"max_batch_size": 1,
+				"max_batch_timeout": 30,
+				"max_retries": 3,
+				"dead_letter_queue": "gpthost-build-dlq-staging"
+			}
+		]
+	},
+	/**
+	 * KV Namespace Bindings - For project metadata (if needed)
+	 * "kv_namespaces": [
+	 *   { "binding": "PROJECT_METADATA", "id": "TBD", "preview_id": "TBD" }
+	 * ]
+	 */
+}

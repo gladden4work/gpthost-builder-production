@@ -1,0 +1,660 @@
+
+ ⛅️ wrangler 4.28.1 (update available 4.31.0)
+─────────────────────────────────────────────
+Using vars defined in .dev.vars
+Your Worker has access to the following bindings:
+Binding                                                             Resource                  Mode
+env.BUILD_QUEUE (gpthost-build-queue-staging)                       Queue                     local
+env.PROJECTS_BUCKET (gpthost-projects-staging)                      R2 Bucket                 local
+env.BUILDS_BUCKET (gpthost-builds-staging)                          R2 Bucket                 local
+env.DEPLOYMENTS_BUCKET (gpthost-deployments-staging)                R2 Bucket                 local
+env.ENVIRONMENT ("staging")                                         Environment Variable      local
+env.MAX_FILE_SIZE ("104857600")                                     Environment Variable      local
+env.SUPPORTED_EXTENSIONS (".html,.jsx,.tsx,.vue,.svelte")           Environment Variable      local
+env.GITHUB_WORKFLOW_FILENAME ("gpthost-build.yml")                  Environment Variable      local
+env.GITHUB_BUILD_TIMEOUT_MS ("900000")                              Environment Variable      local
+env.GITHUB_POLL_INTERVAL_MS ("5000")                                Environment Variable      local
+env.GITHUB_MAX_POLL_ATTEMPTS ("180")                                Environment Variable      local
+env.MVP_ACCESS_TOKEN ("(hidden)")                                   Environment Variable      local
+env.GITHUB_TOKEN ("(hidden)")                                       Environment Variable      local
+env.GITHUB_OWNER ("(hidden)")                                       Environment Variable      local
+env.GITHUB_REPOSITORY ("(hidden)")                                  Environment Variable      local
+env.GITHUB_BUILD_CALLBACK_URL ("(hidden)")                          Environment Variable      local
+env.R2_PUBLIC_URL ("(hidden)")                                      Environment Variable      local
+env.R2_ACCESS_KEY_ID ("(hidden)")                                   Environment Variable      local
+env.R2_SECRET_ACCESS_KEY ("(hidden)")                               Environment Variable      local
+env.CLOUDFLARE_ACCOUNT_ID ("(hidden)")                              Environment Variable      local
+env.CLOUDFLARE_API_TOKEN ("(hidden)")                               Environment Variable      local
+env.R2_BUCKET_NAME ("(hidden)")                                     Environment Variable      local
+
+❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct.
+⎔ Starting local server...
+[wrangler:warn] The latest compatibility date supported by the installed Cloudflare Workers Runtime is "2025-08-03",
+but you've requested "2025-08-09". Falling back to "2025-08-03"...
+Features enabled by your requested compatibility date may not be available.
+Upgrade to `wrangler@4.31.0` to remove this warning.
+[wrangler:info] Ready on http://localhost:8787
+Authentication successful {
+  timestamp: '2025-08-19T06:33:48.451Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/paste',
+  method: 'POST',
+  timestamp: '2025-08-19T06:33:48.466Z'
+}
+Processing paste request for project: storage-test-1755585228437 (ID: ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f)
+Detected framework: react
+Generated filename: component.jsx with MIME type: text/jsx
+Analysis complete for component.jsx: {
+  framework: 'react',
+  componentType: 'single-component',
+  language: 'javascript',
+  componentCount: 1
+}
+File stored successfully at: projects/active/ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f/source/component.jsx
+Project analysis complete: {
+  primaryFramework: 'react',
+  componentType: 'single-component',
+  totalComponents: 1
+}
+Project metadata stored at: projects/active/ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f/metadata.json and projects/ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f/metadata.json
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️ Could not find user component at projects/ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f/source/component.jsx for project ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f[0m
+
+
+Stored scaffolding results for project ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f: 7 files
+✅ Build job build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw queued for project ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  job_id: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw',
+  framework: 'react',
+  priority: 'normal',
+  timeout: 90
+}
+Project status updated to building for ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f
+Build status created for job build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw
+✅ Build job build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw queued for project ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f
+✅ Auto-scaffolding completed successfully for project ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f
+Paste operation completed successfully for project ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f
+Processing build job for project: ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f, job ID: build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw
+✅ [MULTI-PROJECT-BUILD-START] Starting multi-project GitHub Actions build {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  job_id: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw',
+  framework: 'react',
+  timestamp: '2025-08-19T06:33:48.588Z',
+  repository: 'gladden4work/gpthost-build-test',
+  workflow: 'gpthost-build.yml',
+  multi_project_enabled: true
+}
+🔧 [MULTI-PROJECT] Preparing concurrent build environment {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  job_id: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw',
+  framework: 'react',
+  timestamp: '2025-08-19T06:33:48.588Z'
+}
+[MULTI-PROJECT] Preparing concurrent build environment {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  job_id: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw',
+  framework: 'react'
+}
+[PROJECT-ISOLATION] Verifying project isolation { project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f' }
+[PROJECT-ISOLATION] Isolation metadata not found, creating on-demand for legacy project { project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f' }
+[PROJECT-ISOLATION] Creating isolation on-demand {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  framework: 'react',
+  project_name: 'storage-test-1755585228437'
+}
+[PROJECT-ISOLATION] Creating project isolation for legacy project {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  framework: 'react',
+  strict_isolation: true,
+  legacy_format: true
+}
+✅ [PROJECT-ISOLATION] Project isolation created successfully {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  framework: 'react',
+  cache_boundary: 'project-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-react',
+  isolation_level: 'strict',
+  legacy_format: true
+}
+[PROJECT-ISOLATION] Successfully created isolation on-demand {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  isolation_level: 'strict',
+  legacy_format: true
+}
+[wrangler:info] POST /api/paste 201 Created (147ms)
+✅ [PROJECT-ISOLATION] Project isolation verification passed {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  cache_isolated: true,
+  boundaries_secure: true
+}
+[PROJECT-ISOLATION] Setting up build environment {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  job_id: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw',
+  framework: 'react'
+}
+✅ [PROJECT-ISOLATION] Build environment configured {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  job_id: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw',
+  cache_key: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-react-build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw-1755585228623',
+  isolation_level: 'strict'
+}
+✅ [MULTI-PROJECT] Concurrent build environment prepared {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  job_id: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw',
+  duration_ms: 39
+}
+✅ [MULTI-PROJECT] Build environment prepared successfully {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  job_id: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw',
+  framework: 'react',
+  timestamp: '2025-08-19T06:33:48.588Z',
+  isolation_verified: true,
+  resources_allocated: true
+}
+✅ [GITHUB-BRIDGE] GitHub Actions environment detected (test mode) {
+  repository: 'gladden4work/gpthost-build-test',
+  token_prefix: 'ghp_OUr5KU...'
+}
+✅ [REAL-BUILD] GitHub Actions environment verified {
+  repository: 'gladden4work/gpthost-build-test',
+  user: 'test-user',
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f'
+}
+[BUILD-STATUS-UPDATE] Build status updated {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  job_id: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw',
+  status: 'processing',
+  progress: 0,
+  current_stage: 'queued',
+  timestamp: '2025-08-19T06:33:48.630Z'
+}
+✅ [GITHUB-BRIDGE] Initializing GitHub Queue Bridge {
+  repository: 'gladden4work/gpthost-build-test',
+  workflow: 'gpthost-build.yml'
+}
+✅ [GITHUB-BRIDGE] Triggering REAL GitHub Actions build from queue {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  job_id: 'build-ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f-1755585228574-silfqw',
+  framework: 'react',
+  repository: 'gladden4work/gpthost-build-test',
+  workflow: 'gpthost-build.yml'
+}
+Authentication successful {
+  timestamp: '2025-08-19T06:33:48.643Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/projects',
+  method: 'GET',
+  timestamp: '2025-08-19T06:33:48.643Z'
+}
+[API-PROJECTS] Listing all projects
+[MULTI-PROJECT] Listing all projects
+[wrangler:info] GET /api/projects 200 OK (95ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:48.694Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/paste',
+  method: 'POST',
+  timestamp: '2025-08-19T06:33:48.694Z'
+}
+Processing paste request for project: path-test-1755585228693 (ID: 414270cd-7b9f-4b41-9f6b-6ab556468a82)
+Detected framework: unknown
+Generated filename: code.txt with MIME type: text/plain
+Analysis complete for code.txt: {
+  framework: 'unknown',
+  componentType: 'unknown',
+  language: 'unknown',
+  componentCount: 0
+}
+File stored successfully at: projects/active/414270cd-7b9f-4b41-9f6b-6ab556468a82/source/code.txt
+Project analysis complete: {
+  primaryFramework: 'unknown',
+  componentType: 'unknown',
+  totalComponents: 0
+}
+Project metadata stored at: projects/active/414270cd-7b9f-4b41-9f6b-6ab556468a82/metadata.json and projects/414270cd-7b9f-4b41-9f6b-6ab556468a82/metadata.json
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️ Could not find user component at projects/414270cd-7b9f-4b41-9f6b-6ab556468a82/source/component.jsx for project 414270cd-7b9f-4b41-9f6b-6ab556468a82[0m
+
+
+Stored scaffolding results for project 414270cd-7b9f-4b41-9f6b-6ab556468a82: 7 files
+✅ Build job build-414270cd-7b9f-4b41-9f6b-6ab556468a82-1755585228724-fsqfrr queued for project 414270cd-7b9f-4b41-9f6b-6ab556468a82 {
+  project_id: '414270cd-7b9f-4b41-9f6b-6ab556468a82',
+  job_id: 'build-414270cd-7b9f-4b41-9f6b-6ab556468a82-1755585228724-fsqfrr',
+  framework: 'react',
+  priority: 'normal',
+  timeout: 90
+}
+Project status updated to building for 414270cd-7b9f-4b41-9f6b-6ab556468a82
+Build status created for job build-414270cd-7b9f-4b41-9f6b-6ab556468a82-1755585228724-fsqfrr
+✅ Build job build-414270cd-7b9f-4b41-9f6b-6ab556468a82-1755585228724-fsqfrr queued for project 414270cd-7b9f-4b41-9f6b-6ab556468a82
+✅ Auto-scaffolding completed successfully for project 414270cd-7b9f-4b41-9f6b-6ab556468a82
+Paste operation completed successfully for project 414270cd-7b9f-4b41-9f6b-6ab556468a82
+[wrangler:info] POST /api/paste 201 Created (35ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:48.732Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/projects',
+  method: 'GET',
+  timestamp: '2025-08-19T06:33:48.732Z'
+}
+[API-PROJECTS] Listing all projects
+[MULTI-PROJECT] Listing all projects
+[wrangler:info] GET /api/projects 200 OK (35ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:48.814Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/paste',
+  method: 'POST',
+  timestamp: '2025-08-19T06:33:48.814Z'
+}
+Processing paste request for project: project-0-1755585228813 (ID: 52a669ce-a279-4772-9d8f-b6a47d06f463)
+Detected framework: unknown
+Generated filename: code.txt with MIME type: text/plain
+Analysis complete for code.txt: {
+  framework: 'unknown',
+  componentType: 'unknown',
+  language: 'unknown',
+  componentCount: 0
+}
+File stored successfully at: projects/active/52a669ce-a279-4772-9d8f-b6a47d06f463/source/code.txt
+Project analysis complete: {
+  primaryFramework: 'unknown',
+  componentType: 'unknown',
+  totalComponents: 0
+}
+Project metadata stored at: projects/active/52a669ce-a279-4772-9d8f-b6a47d06f463/metadata.json and projects/52a669ce-a279-4772-9d8f-b6a47d06f463/metadata.json
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️ Could not find user component at projects/52a669ce-a279-4772-9d8f-b6a47d06f463/source/component.jsx for project 52a669ce-a279-4772-9d8f-b6a47d06f463[0m
+
+
+Stored scaffolding results for project 52a669ce-a279-4772-9d8f-b6a47d06f463: 7 files
+✅ Build job build-52a669ce-a279-4772-9d8f-b6a47d06f463-1755585228859-id6pdf queued for project 52a669ce-a279-4772-9d8f-b6a47d06f463 {
+  project_id: '52a669ce-a279-4772-9d8f-b6a47d06f463',
+  job_id: 'build-52a669ce-a279-4772-9d8f-b6a47d06f463-1755585228859-id6pdf',
+  framework: 'react',
+  priority: 'normal',
+  timeout: 90
+}
+Project status updated to building for 52a669ce-a279-4772-9d8f-b6a47d06f463
+Build status created for job build-52a669ce-a279-4772-9d8f-b6a47d06f463-1755585228859-id6pdf
+✅ Build job build-52a669ce-a279-4772-9d8f-b6a47d06f463-1755585228859-id6pdf queued for project 52a669ce-a279-4772-9d8f-b6a47d06f463
+✅ Auto-scaffolding completed successfully for project 52a669ce-a279-4772-9d8f-b6a47d06f463
+Paste operation completed successfully for project 52a669ce-a279-4772-9d8f-b6a47d06f463
+[wrangler:info] POST /api/paste 201 Created (52ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:48.868Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/paste',
+  method: 'POST',
+  timestamp: '2025-08-19T06:33:48.868Z'
+}
+Processing paste request for project: project-1-1755585228865 (ID: 7acd10ee-6093-4b91-93c6-3c0131ccf352)
+Detected framework: unknown
+Generated filename: code.txt with MIME type: text/plain
+Analysis complete for code.txt: {
+  framework: 'unknown',
+  componentType: 'unknown',
+  language: 'unknown',
+  componentCount: 0
+}
+File stored successfully at: projects/active/7acd10ee-6093-4b91-93c6-3c0131ccf352/source/code.txt
+Project analysis complete: {
+  primaryFramework: 'unknown',
+  componentType: 'unknown',
+  totalComponents: 0
+}
+Project metadata stored at: projects/active/7acd10ee-6093-4b91-93c6-3c0131ccf352/metadata.json and projects/7acd10ee-6093-4b91-93c6-3c0131ccf352/metadata.json
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️ Could not find user component at projects/7acd10ee-6093-4b91-93c6-3c0131ccf352/source/component.jsx for project 7acd10ee-6093-4b91-93c6-3c0131ccf352[0m
+
+
+Stored scaffolding results for project 7acd10ee-6093-4b91-93c6-3c0131ccf352: 7 files
+✅ Build job build-7acd10ee-6093-4b91-93c6-3c0131ccf352-1755585228891-kppzvl queued for project 7acd10ee-6093-4b91-93c6-3c0131ccf352 {
+  project_id: '7acd10ee-6093-4b91-93c6-3c0131ccf352',
+  job_id: 'build-7acd10ee-6093-4b91-93c6-3c0131ccf352-1755585228891-kppzvl',
+  framework: 'react',
+  priority: 'normal',
+  timeout: 90
+}
+Project status updated to building for 7acd10ee-6093-4b91-93c6-3c0131ccf352
+Build status created for job build-7acd10ee-6093-4b91-93c6-3c0131ccf352-1755585228891-kppzvl
+✅ Build job build-7acd10ee-6093-4b91-93c6-3c0131ccf352-1755585228891-kppzvl queued for project 7acd10ee-6093-4b91-93c6-3c0131ccf352
+✅ Auto-scaffolding completed successfully for project 7acd10ee-6093-4b91-93c6-3c0131ccf352
+Paste operation completed successfully for project 7acd10ee-6093-4b91-93c6-3c0131ccf352
+[wrangler:info] POST /api/paste 201 Created (29ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:48.896Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/paste',
+  method: 'POST',
+  timestamp: '2025-08-19T06:33:48.896Z'
+}
+Processing paste request for project: project-2-1755585228895 (ID: cfbeddc5-509c-432c-bdff-6c868cd456d0)
+Detected framework: unknown
+Generated filename: code.txt with MIME type: text/plain
+Analysis complete for code.txt: {
+  framework: 'unknown',
+  componentType: 'unknown',
+  language: 'unknown',
+  componentCount: 0
+}
+File stored successfully at: projects/active/cfbeddc5-509c-432c-bdff-6c868cd456d0/source/code.txt
+Project analysis complete: {
+  primaryFramework: 'unknown',
+  componentType: 'unknown',
+  totalComponents: 0
+}
+Project metadata stored at: projects/active/cfbeddc5-509c-432c-bdff-6c868cd456d0/metadata.json and projects/cfbeddc5-509c-432c-bdff-6c868cd456d0/metadata.json
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️ Could not find user component at projects/cfbeddc5-509c-432c-bdff-6c868cd456d0/source/component.jsx for project cfbeddc5-509c-432c-bdff-6c868cd456d0[0m
+
+
+Stored scaffolding results for project cfbeddc5-509c-432c-bdff-6c868cd456d0: 7 files
+✅ Build job build-cfbeddc5-509c-432c-bdff-6c868cd456d0-1755585228922-ncjki queued for project cfbeddc5-509c-432c-bdff-6c868cd456d0 {
+  project_id: 'cfbeddc5-509c-432c-bdff-6c868cd456d0',
+  job_id: 'build-cfbeddc5-509c-432c-bdff-6c868cd456d0-1755585228922-ncjki',
+  framework: 'react',
+  priority: 'normal',
+  timeout: 90
+}
+Project status updated to building for cfbeddc5-509c-432c-bdff-6c868cd456d0
+Build status created for job build-cfbeddc5-509c-432c-bdff-6c868cd456d0-1755585228922-ncjki
+✅ Build job build-cfbeddc5-509c-432c-bdff-6c868cd456d0-1755585228922-ncjki queued for project cfbeddc5-509c-432c-bdff-6c868cd456d0
+✅ Auto-scaffolding completed successfully for project cfbeddc5-509c-432c-bdff-6c868cd456d0
+Paste operation completed successfully for project cfbeddc5-509c-432c-bdff-6c868cd456d0
+[wrangler:info] POST /api/paste 201 Created (30ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:48.927Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/projects',
+  method: 'GET',
+  timestamp: '2025-08-19T06:33:48.927Z'
+}
+[API-PROJECTS] Listing all projects
+[MULTI-PROJECT] Listing all projects
+[wrangler:info] GET /api/projects 200 OK (28ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:48.963Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/paste',
+  method: 'POST',
+  timestamp: '2025-08-19T06:33:48.963Z'
+}
+Processing paste request for project: metadata-test-1755585228962 (ID: 6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb)
+Detected framework: javascript
+Generated filename: script.js with MIME type: text/javascript
+Analysis complete for script.js: {
+  framework: 'javascript',
+  componentType: 'full-application',
+  language: 'javascript',
+  componentCount: 1
+}
+File stored successfully at: projects/active/6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb/source/script.js
+Project analysis complete: {
+  primaryFramework: 'javascript',
+  componentType: 'full-application',
+  totalComponents: 1
+}
+Project metadata stored at: projects/active/6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb/metadata.json and projects/6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb/metadata.json
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️ Could not find user component at projects/6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb/source/component.jsx for project 6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb[0m
+
+
+Stored scaffolding results for project 6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb: 7 files
+✅ Build job build-6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb-1755585228993-5eihfp queued for project 6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb {
+  project_id: '6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb',
+  job_id: 'build-6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb-1755585228993-5eihfp',
+  framework: 'react',
+  priority: 'normal',
+  timeout: 90
+}
+Project status updated to building for 6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb
+Build status created for job build-6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb-1755585228993-5eihfp
+✅ Build job build-6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb-1755585228993-5eihfp queued for project 6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb
+✅ Auto-scaffolding completed successfully for project 6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb
+Paste operation completed successfully for project 6ec8262d-d1e5-46f0-a17c-3e5cedd0b8eb
+[wrangler:info] POST /api/paste 201 Created (36ms)
+✅ [GITHUB-BRIDGE] GitHub token validated { user: 'gladden4work', scopes: 0 }
+[GITHUB-BRIDGE] Attempt 1/5 to trigger workflow {
+  project_id: 'ecd76dcc-9c00-4cd7-b590-0ea53e8ac16f',
+  attempt: 1,
+  repository: 'gladden4work/gpthost-build-test'
+}
+🚀 [GITHUB-API] Triggering GitHub Actions workflow with source files as input
+✅ [GITHUB-API] Workflow dispatch request sent successfully
+Authentication successful {
+  timestamp: '2025-08-19T06:33:50.003Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/projects',
+  method: 'GET',
+  timestamp: '2025-08-19T06:33:50.004Z'
+}
+[API-PROJECTS] Listing all projects
+[MULTI-PROJECT] Listing all projects
+[wrangler:info] GET /api/projects 200 OK (39ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:50.047Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/projects',
+  method: 'GET',
+  timestamp: '2025-08-19T06:33:50.047Z'
+}
+[API-PROJECTS] Listing all projects
+[MULTI-PROJECT] Listing all projects
+[wrangler:info] GET /api/projects 200 OK (51ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:50.099Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/paste',
+  method: 'POST',
+  timestamp: '2025-08-19T06:33:50.099Z'
+}
+Processing paste request for project: index-test-1755585230098 (ID: e33fb667-6f69-490c-aacf-3e6ddb29375a)
+Detected framework: unknown
+Generated filename: code.txt with MIME type: text/plain
+Analysis complete for code.txt: {
+  framework: 'unknown',
+  componentType: 'unknown',
+  language: 'unknown',
+  componentCount: 0
+}
+File stored successfully at: projects/active/e33fb667-6f69-490c-aacf-3e6ddb29375a/source/code.txt
+Project analysis complete: {
+  primaryFramework: 'unknown',
+  componentType: 'unknown',
+  totalComponents: 0
+}
+Project metadata stored at: projects/active/e33fb667-6f69-490c-aacf-3e6ddb29375a/metadata.json and projects/e33fb667-6f69-490c-aacf-3e6ddb29375a/metadata.json
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️ Could not find user component at projects/e33fb667-6f69-490c-aacf-3e6ddb29375a/source/component.jsx for project e33fb667-6f69-490c-aacf-3e6ddb29375a[0m
+
+
+Stored scaffolding results for project e33fb667-6f69-490c-aacf-3e6ddb29375a: 7 files
+✅ Build job build-e33fb667-6f69-490c-aacf-3e6ddb29375a-1755585230131-dla8yf queued for project e33fb667-6f69-490c-aacf-3e6ddb29375a {
+  project_id: 'e33fb667-6f69-490c-aacf-3e6ddb29375a',
+  job_id: 'build-e33fb667-6f69-490c-aacf-3e6ddb29375a-1755585230131-dla8yf',
+  framework: 'react',
+  priority: 'normal',
+  timeout: 90
+}
+Project status updated to building for e33fb667-6f69-490c-aacf-3e6ddb29375a
+Build status created for job build-e33fb667-6f69-490c-aacf-3e6ddb29375a-1755585230131-dla8yf
+✅ Build job build-e33fb667-6f69-490c-aacf-3e6ddb29375a-1755585230131-dla8yf queued for project e33fb667-6f69-490c-aacf-3e6ddb29375a
+✅ Auto-scaffolding completed successfully for project e33fb667-6f69-490c-aacf-3e6ddb29375a
+Paste operation completed successfully for project e33fb667-6f69-490c-aacf-3e6ddb29375a
+[wrangler:info] POST /api/paste 201 Created (40ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:50.139Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/projects',
+  method: 'GET',
+  timestamp: '2025-08-19T06:33:50.139Z'
+}
+[API-PROJECTS] Listing all projects
+[MULTI-PROJECT] Listing all projects
+[wrangler:info] GET /api/projects 200 OK (32ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:50.187Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/paste',
+  method: 'POST',
+  timestamp: '2025-08-19T06:33:50.187Z'
+}
+Processing paste request for project: dir-test-1755585230185 (ID: c6b79763-fd0c-4103-89af-091db4c35e6e)
+Detected framework: javascript
+Generated filename: script.js with MIME type: text/javascript
+Analysis complete for script.js: {
+  framework: 'javascript',
+  componentType: 'single-component',
+  language: 'javascript',
+  componentCount: 1
+}
+File stored successfully at: projects/active/c6b79763-fd0c-4103-89af-091db4c35e6e/source/script.js
+Project analysis complete: {
+  primaryFramework: 'javascript',
+  componentType: 'single-component',
+  totalComponents: 1
+}
+Project metadata stored at: projects/active/c6b79763-fd0c-4103-89af-091db4c35e6e/metadata.json and projects/c6b79763-fd0c-4103-89af-091db4c35e6e/metadata.json
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️ Could not find user component at projects/c6b79763-fd0c-4103-89af-091db4c35e6e/source/component.jsx for project c6b79763-fd0c-4103-89af-091db4c35e6e[0m
+
+
+Stored scaffolding results for project c6b79763-fd0c-4103-89af-091db4c35e6e: 7 files
+✅ Build job build-c6b79763-fd0c-4103-89af-091db4c35e6e-1755585230211-y8nyvf queued for project c6b79763-fd0c-4103-89af-091db4c35e6e {
+  project_id: 'c6b79763-fd0c-4103-89af-091db4c35e6e',
+  job_id: 'build-c6b79763-fd0c-4103-89af-091db4c35e6e-1755585230211-y8nyvf',
+  framework: 'react',
+  priority: 'normal',
+  timeout: 90
+}
+Project status updated to building for c6b79763-fd0c-4103-89af-091db4c35e6e
+Build status created for job build-c6b79763-fd0c-4103-89af-091db4c35e6e-1755585230211-y8nyvf
+✅ Build job build-c6b79763-fd0c-4103-89af-091db4c35e6e-1755585230211-y8nyvf queued for project c6b79763-fd0c-4103-89af-091db4c35e6e
+✅ Auto-scaffolding completed successfully for project c6b79763-fd0c-4103-89af-091db4c35e6e
+Paste operation completed successfully for project c6b79763-fd0c-4103-89af-091db4c35e6e
+[wrangler:info] POST /api/paste 201 Created (30ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:50.218Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/projects',
+  method: 'GET',
+  timestamp: '2025-08-19T06:33:50.219Z'
+}
+[API-PROJECTS] Listing all projects
+[MULTI-PROJECT] Listing all projects
+[wrangler:info] GET /api/projects 200 OK (29ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:50.255Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/paste',
+  method: 'POST',
+  timestamp: '2025-08-19T06:33:50.255Z'
+}
+Processing paste request for project: storage-1755585230253 (ID: 2d2fde0d-ebce-4202-a100-02f91e3b9233)
+Detected framework: javascript
+Generated filename: script.js with MIME type: text/javascript
+Analysis complete for script.js: {
+  framework: 'javascript',
+  componentType: 'full-application',
+  language: 'javascript',
+  componentCount: 1
+}
+File stored successfully at: projects/active/2d2fde0d-ebce-4202-a100-02f91e3b9233/source/script.js
+Project analysis complete: {
+  primaryFramework: 'javascript',
+  componentType: 'full-application',
+  totalComponents: 1
+}
+Project metadata stored at: projects/active/2d2fde0d-ebce-4202-a100-02f91e3b9233/metadata.json and projects/2d2fde0d-ebce-4202-a100-02f91e3b9233/metadata.json
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️ Could not find user component at projects/2d2fde0d-ebce-4202-a100-02f91e3b9233/source/component.jsx for project 2d2fde0d-ebce-4202-a100-02f91e3b9233[0m
+
+
+Stored scaffolding results for project 2d2fde0d-ebce-4202-a100-02f91e3b9233: 7 files
+✅ Build job build-2d2fde0d-ebce-4202-a100-02f91e3b9233-1755585230275-q4v7fg queued for project 2d2fde0d-ebce-4202-a100-02f91e3b9233 {
+  project_id: '2d2fde0d-ebce-4202-a100-02f91e3b9233',
+  job_id: 'build-2d2fde0d-ebce-4202-a100-02f91e3b9233-1755585230275-q4v7fg',
+  framework: 'react',
+  priority: 'normal',
+  timeout: 90
+}
+Project status updated to building for 2d2fde0d-ebce-4202-a100-02f91e3b9233
+Build status created for job build-2d2fde0d-ebce-4202-a100-02f91e3b9233-1755585230275-q4v7fg
+✅ Build job build-2d2fde0d-ebce-4202-a100-02f91e3b9233-1755585230275-q4v7fg queued for project 2d2fde0d-ebce-4202-a100-02f91e3b9233
+✅ Auto-scaffolding completed successfully for project 2d2fde0d-ebce-4202-a100-02f91e3b9233
+Paste operation completed successfully for project 2d2fde0d-ebce-4202-a100-02f91e3b9233
+[wrangler:info] POST /api/paste 201 Created (29ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:50.283Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/scaffolding/2d2fde0d-ebce-4202-a100-02f91e3b9233/files',
+  method: 'GET',
+  timestamp: '2025-08-19T06:33:50.284Z'
+}
+[wrangler:info] GET /api/scaffolding/2d2fde0d-ebce-4202-a100-02f91e3b9233/files 200 OK (2ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:50.288Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/scaffolding/2d2fde0d-ebce-4202-a100-02f91e3b9233/status',
+  method: 'GET',
+  timestamp: '2025-08-19T06:33:50.288Z'
+}
+[wrangler:info] GET /api/scaffolding/2d2fde0d-ebce-4202-a100-02f91e3b9233/status 200 OK (2ms)
+Authentication successful {
+  timestamp: '2025-08-19T06:33:50.290Z',
+  tokenLength: 22,
+  tokenPrefix: 'test...'
+}
+Authentication middleware passed {
+  path: '/api/projects',
+  method: 'GET',
+  timestamp: '2025-08-19T06:33:50.291Z'
+}
+[API-PROJECTS] Listing all projects
+[MULTI-PROJECT] Listing all projects
+[wrangler:info] GET /api/projects 200 OK (36ms)

@@ -1,0 +1,8 @@
+npm error Missing script: "test:e2e:live"
+npm error
+npm error Did you mean this?
+npm error   npm run test:e2e # run the "test:e2e" package script
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /Users/gladdenchoi/.npm/_logs/2025-09-01T05_12_37_405Z-debug-0.log
