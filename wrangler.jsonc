@@ -96,11 +96,12 @@
   ],
   /**
    * Routes - Will be configured via DNS for subdomain routing
+   * DISABLED FOR NOW: Causing error 1042 on workers.dev subdomain
    */
-  "routes": [
-    {
-      "pattern": "*.gpthost.online/*",
-      "zone_name": "gpthost.online"
-    }
-  ]
+  // "routes": [
+  //   {
+  //     "pattern": "*.gpthost.online/*",
+  //     "zone_name": "gpthost.online"
+  //   }
+  // ]
 }

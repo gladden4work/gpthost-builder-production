@@ -31,7 +31,22 @@ export interface Env {
   
   // User context
   USER_ID?: string;
-  
+
+  // Subdomain Routing (Phase 0) - Feature Flags
+  /**
+   * Enable subdomain-based routing for projects
+   * Default: "false" (disabled)
+   * When enabled, projects are accessible via {subdomain}.gpthost.online
+   * When disabled, projects use path-based routing: /sites/{project-id}/
+   */
+  ENABLE_SUBDOMAIN_ROUTING?: string;  // "true" | "false"
+
+  /**
+   * Base domain for subdomain routing
+   * Examples: "gpthost.online", "staging.gpthost.online"
+   */
+  BASE_DOMAIN?: string;
+
   // Other environment variables
   GITHUB_TOKEN?: string;
   GITHUB_ORG?: string;
