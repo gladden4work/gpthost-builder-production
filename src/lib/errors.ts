@@ -49,6 +49,17 @@ export enum BuildErrorCode {
 }
 
 /**
+ * Subdomain service error codes
+ */
+export enum SubdomainErrorCode {
+  NOT_FOUND = 'SUBDOMAIN_NOT_FOUND',
+  ALREADY_EXISTS = 'SUBDOMAIN_ALREADY_EXISTS',
+  INVALID_NAME = 'SUBDOMAIN_INVALID_NAME',
+  KV_ERROR = 'SUBDOMAIN_KV_ERROR',
+  UNAUTHORIZED = 'SUBDOMAIN_UNAUTHORIZED'
+}
+
+/**
  * Base error class with structured error information
  */
 export abstract class BaseError extends Error {
@@ -111,6 +122,20 @@ export class GitHubError extends BaseError {
 export class BuildError extends BaseError {
   constructor(
     public readonly code: BuildErrorCode,
+    message: string,
+    context?: Record<string, any>,
+    cause?: Error
+  ) {
+    super(code, message, context, cause);
+  }
+}
+
+/**
+ * Subdomain service error
+ */
+export class SubdomainError extends BaseError {
+  constructor(
+    public readonly code: SubdomainErrorCode,
     message: string,
     context?: Record<string, any>,
     cause?: Error

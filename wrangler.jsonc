@@ -35,7 +35,8 @@
 	"vars": {
 		"ENVIRONMENT": "production",
 		"BASE_DOMAIN": "gpthost.online",
-		"ENABLE_SUBDOMAIN_ROUTING": "false",
+		"ENABLE_SUBDOMAIN_ROUTING": "true",
+		"SUBDOMAIN_SUFFIX": "",
 		"MAX_FILE_SIZE": "104857600",
 		"SUPPORTED_EXTENSIONS": ".html,.jsx,.tsx,.vue,.svelte",
 		"SUPABASE_URL": "https://ahqhniqnbdxwupsldcxp.supabase.co",
@@ -85,13 +86,17 @@
 		]
 	},
   /**
-   * KV Namespace Bindings - For rate limiting and project metadata
-   * PLACEHOLDER: Will be updated with production KV namespace ID after creation
+   * KV Namespace Bindings - For rate limiting and subdomain mappings
+   * Production-specific namespaces to avoid conflicts with staging
    */
   "kv_namespaces": [
     {
       "binding": "RATE_LIMIT_STORE",
       "id": "ffe16dc7f29e4ae4a6c85a0bb7af117a"
+    },
+    {
+      "binding": "SUBDOMAIN_MAPPINGS",
+      "id": "42ecae1ef79b445eba09c38e29c99f60"
     }
   ],
   /**
