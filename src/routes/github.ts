@@ -1,7 +1,7 @@
 /**
  * GitHub Repository Management Routes for GPTHost
  * 
- * TASK-021: GitHub Repository Setup & Token Management
+ * GitHub Repository Setup & Token Management
  * 
  * These routes handle:
  * - GitHub token validation and management
@@ -1125,6 +1125,20 @@ export async function githubBuildCallbackHandler(request: Request, env: Env): Pr
       env.PROJECTS_BUCKET.put(metadataActivePath, metadataContent, metadataOptions),
       env.PROJECTS_BUCKET.put(metadataLegacyPath, metadataContent, metadataOptions)
     ]);
+
+    // CRITICAL: Update build-status.json for real-time dashboard accuracy
+    // This is the canonical source that projectsList reads for current status
+    const statusKey = `projects/${body.project_id}/build-status.json`;
+    const statusContent = JSON.stringify(buildStatus, null, 2);
+    await env.PROJECTS_BUCKET.put(statusKey, statusContent, {
+      httpMetadata: { contentType: 'application/json' },
+      customMetadata: {
+        project_id: body.project_id,
+        status: body.status,
+        updated_at: new Date().toISOString(),
+        source: 'github_actions_callback'
+      }
+    });
 
     console.info(`✅ Project metadata updated for ${body.project_id} (source: ${metadataSource}, status: ${body.status})`);
 

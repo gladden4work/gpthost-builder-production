@@ -1,5 +1,5 @@
 /**
- * TASK-025: Build Status Orchestrator
+ * Build Status Orchestrator
  * 
  * This utility orchestrates the complete build status polling system by integrating
  * all the components: GitHub Queue Bridge, Build Status Tracker, and SSE Manager.

@@ -1,5 +1,5 @@
 /**
- * TASK-034: Deep Validation Utility
+ * Deep Validation Utility
  * 
  * Comprehensive validation for nested objects, build configurations,
  * environment variables, and complex data structures in project metadata.

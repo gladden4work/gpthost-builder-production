@@ -7,28 +7,38 @@
 import { Result, Ok, Err } from '../lib/result';
 import { ProjectError, ProjectErrorCode, StorageErrorCode } from '../lib/errors';
 import { IStorageService } from './StorageService';
-import { 
-  Project, 
-  ProjectStatus, 
+import {
+  Project,
+  ProjectStatus,
   FrameworkType,
   CreateProjectInput,
+  UpdateProjectInput,
   ProjectFilter,
   ProjectList,
-  ProjectFile 
+  ProjectFile,
+  BuildMetadata
 } from '../domain/models';
+import { ManifestProjectSummary } from '../domain/manifest';
+import { ManifestService } from './ManifestService';
+import { isManifestEnabled } from '../config/featureFlags';
+import { Env } from '../types/env';
+import { normalizeOwnerToken } from '../utils/ownerIdentity';
 
 
 export interface IProjectService {
   createProject(input: CreateProjectInput): Promise<Result<Project, ProjectError>>;
   getProject(projectId: string): Promise<Result<Project, ProjectError>>;
-  updateProject(projectId: string, updates: Partial<Project>): Promise<Result<Project, ProjectError>>;
+  updateProject(projectId: string, updates: UpdateProjectInput): Promise<Result<Project, ProjectError>>;
   deleteProject(projectId: string): Promise<Result<void, ProjectError>>;
   listProjects(filter?: ProjectFilter): Promise<Result<ProjectList, ProjectError>>;
   addFiles(projectId: string, files: ProjectFile[]): Promise<Result<Project, ProjectError>>;
 }
 
 export class ProjectService implements IProjectService {
-  constructor(private readonly storage: IStorageService) {}
+  constructor(
+    private readonly storage: IStorageService,
+    private readonly env?: Env
+  ) {}
 
   // Constants (extracted)
   private static readonly PROJECTS_PREFIX = 'projects' as const;
@@ -70,11 +80,16 @@ export class ProjectService implements IProjectService {
       description: input.description,
       framework,
       status: 'pending' as ProjectStatus,
-      files: input.files.map(f => ({
-        path: this.sanitizePath(f.path),
-        size: new TextEncoder().encode(f.content).length,
-        contentType: this.getContentType(f.path)
-      })),
+      files: input.files.map(f => {
+        const sanitizedPath = this.sanitizePath(f.path);
+        // Store full R2 path including prefix for scaffolding to find files
+        const fullPath = this.getProjectFilePath(projectId, sanitizedPath, input.sourcePrefix);
+        return {
+          path: fullPath,
+          size: new TextEncoder().encode(f.content).length,
+          contentType: this.getContentType(f.path)
+        };
+      }),
       ownerId: input.ownerId ?? ProjectService.LEGACY_OWNER_ID,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -101,7 +116,7 @@ export class ProjectService implements IProjectService {
     // Save project files
     for (const file of input.files) {
       const sanitizedPath = this.sanitizePath(file.path);
-      const filePath = this.getProjectFilePath(projectId, sanitizedPath);
+      const filePath = this.getProjectFilePath(projectId, sanitizedPath, input.sourcePrefix);
       const fileContent = new TextEncoder().encode(file.content);
       
       const uploadResult = await this.storage.uploadFile(
@@ -119,6 +134,33 @@ export class ProjectService implements IProjectService {
           `Failed to save file ${file.path}: ${uploadResult.error.message}`,
           { service: 'ProjectService', operation: 'createProject', projectId }
         ));
+      }
+    }
+
+    // Update manifest if feature enabled
+    if (this.env && isManifestEnabled(this.env)) {
+      try {
+        const manifestService = new ManifestService(this.env);
+        const summary: ManifestProjectSummary = {
+          id: project.id,
+          name: project.name,
+          framework: project.framework as ManifestProjectSummary['framework'],
+          status: 'pending',
+          created_at: project.createdAt.toISOString(),
+          updated_at: project.updatedAt.toISOString(),
+          deployment_url: null,
+          subdomain: null,
+          file_count: project.files.length,
+          build_signals: { has_success: false, has_failure: false, last_build_id: null }
+        };
+        await manifestService.addProject(project.ownerId!, summary);
+      } catch (error) {
+        // Log but don't fail - manifest is secondary to R2
+        console.error('[ProjectService] Failed to update manifest on create', {
+          projectId: project.id,
+          ownerId: project.ownerId,
+          error: error instanceof Error ? error.message : 'Unknown'
+        });
       }
     }
 
@@ -150,7 +192,12 @@ export class ProjectService implements IProjectService {
       // Convert date strings back to Date objects
       project.createdAt = new Date(project.createdAt);
       project.updatedAt = new Date(project.updatedAt);
-      project.ownerId = project.ownerId || ProjectService.LEGACY_OWNER_ID;
+      // Normalize ownerId from both camelCase and snake_case to avoid mis-filtering
+      const ownerIdFromSnake = (project as any).owner_id as string | undefined;
+      project.ownerId = project.ownerId || ownerIdFromSnake || ProjectService.LEGACY_OWNER_ID;
+      if (project.buildMetadata) {
+        project.buildMetadata = this.normalizeBuildMetadataDates(project.buildMetadata);
+      }
       
       return Ok(project);
     } catch (error) {
@@ -164,7 +211,7 @@ export class ProjectService implements IProjectService {
 
   async updateProject(
     projectId: string, 
-    updates: Partial<Project>
+    updates: UpdateProjectInput
   ): Promise<Result<Project, ProjectError>> {
     // Get existing project
     const getResult = await this.getProject(projectId);
@@ -184,9 +231,10 @@ export class ProjectService implements IProjectService {
     }
 
     // Apply updates
+    const normalizedUpdates = this.normalizeUpdateInput(updates);
     const updatedProject = {
       ...project,
-      ...updates,
+      ...normalizedUpdates,
       updatedAt: new Date()
     };
 
@@ -208,10 +256,37 @@ export class ProjectService implements IProjectService {
       ));
     }
 
+    // Update manifest if feature enabled
+    if (this.env && isManifestEnabled(this.env) && updatedProject.ownerId) {
+      try {
+        const manifestService = new ManifestService(this.env);
+        const manifestUpdates: Partial<ManifestProjectSummary> = {};
+
+        if (updates.name !== undefined) manifestUpdates.name = updates.name;
+        if (updates.status !== undefined) {
+          manifestUpdates.status = this.mapProjectStatusToManifestStatus(updates.status);
+        }
+        if (updates.files !== undefined) manifestUpdates.file_count = updates.files.length;
+        if (updates.deploymentUrl !== undefined) manifestUpdates.deployment_url = updates.deploymentUrl || null;
+
+        await manifestService.updateProject(updatedProject.ownerId, projectId, manifestUpdates);
+      } catch (error) {
+        console.error('[ProjectService] Failed to update manifest on update', {
+          projectId,
+          ownerId: updatedProject.ownerId,
+          error: error instanceof Error ? error.message : 'Unknown'
+        });
+      }
+    }
+
     return Ok(updatedProject);
   }
 
   async deleteProject(projectId: string): Promise<Result<void, ProjectError>> {
+    // Get project first to capture ownerId for manifest update
+    const getResult = await this.getProject(projectId);
+    const ownerId = getResult.ok ? getResult.value.ownerId : null;
+
     const prefixes = [
       `${ProjectService.PROJECTS_PREFIX}/${projectId}/`,
       `${ProjectService.PROJECTS_PREFIX}/active/${projectId}/`,
@@ -250,59 +325,150 @@ export class ProjectService implements IProjectService {
       ));
     }
 
+    // Update manifest if feature enabled
+    if (this.env && isManifestEnabled(this.env) && ownerId) {
+      try {
+        const manifestService = new ManifestService(this.env);
+        await manifestService.removeProject(ownerId, projectId);
+      } catch (error) {
+        console.error('[ProjectService] Failed to update manifest on delete', {
+          projectId,
+          ownerId,
+          error: error instanceof Error ? error.message : 'Unknown'
+        });
+      }
+    }
+
     return Ok(undefined);
   }
 
   async listProjects(filter?: ProjectFilter): Promise<Result<ProjectList, ProjectError>> {
-    // List all project metadata files
-    const listResult = await this.storage.listFiles(`${ProjectService.PROJECTS_PREFIX}/`, {
-      maxKeys: 1000
-    });
+    // Fast prefix-only listing to avoid walking every project file
+    const projects: Project[] = [];
+    const seenIds = new Set<string>();
+    const ownerAliasSet = new Set<string>();
 
-    if (!listResult.ok) {
+    if (filter?.ownerId) {
+      const normalized = normalizeOwnerToken(filter.ownerId);
+      if (normalized) ownerAliasSet.add(normalized);
+    }
+
+    if (filter?.ownerAliases?.length) {
+      for (const alias of filter.ownerAliases) {
+        const normalized = normalizeOwnerToken(alias);
+        if (normalized) ownerAliasSet.add(normalized);
+      }
+    }
+    const hasOwnerAliasFilter = ownerAliasSet.size > 0;
+
+    const extractIds = (prefixes: string[], base: string) => {
+      for (const prefix of prefixes) {
+        if (!prefix.startsWith(base)) continue;
+        const remainder = prefix.slice(base.length).replace(/^\/+|\/+$/g, '');
+        const projectId = remainder.split('/')[0];
+        if (projectId) seenIds.add(projectId);
+      }
+    };
+
+    try {
+      if (typeof this.storage.listPrefixes === 'function') {
+        const activePrefixes = await this.storage.listPrefixes(`${ProjectService.PROJECTS_PREFIX}/active/`);
+        if (activePrefixes.ok) extractIds(activePrefixes.value, `${ProjectService.PROJECTS_PREFIX}/active/`);
+
+        const legacyPrefixes = await this.storage.listPrefixes(`${ProjectService.PROJECTS_PREFIX}/`);
+        if (legacyPrefixes.ok) extractIds(legacyPrefixes.value, `${ProjectService.PROJECTS_PREFIX}/`);
+      } else {
+        // Fallback to legacy listFiles if prefixes not supported
+        const listResult = await this.storage.listFiles(`${ProjectService.PROJECTS_PREFIX}/`, {
+          maxKeys: 2000
+        });
+
+        if (!listResult.ok) {
+          return Err(new ProjectError(
+            ProjectErrorCode.STORAGE_ERROR,
+            `Failed to list projects: ${listResult.error.message}`,
+            { service: 'ProjectService', operation: 'listProjects' }
+          ));
+        }
+
+        listResult.value
+          .filter(f => f.key.endsWith(`/${ProjectService.METADATA_FILENAME}`))
+          .forEach(f => {
+            const withoutBase = f.key.replace(`${ProjectService.PROJECTS_PREFIX}/`, '');
+            const projectId = withoutBase.split('/')[0];
+            if (projectId) seenIds.add(projectId);
+          });
+      }
+    } catch (error) {
       return Err(new ProjectError(
         ProjectErrorCode.STORAGE_ERROR,
-        `Failed to list projects: ${listResult.error.message}`,
+        `Failed to enumerate projects: ${error instanceof Error ? error.message : String(error)}`,
         { service: 'ProjectService', operation: 'listProjects' }
       ));
     }
 
-    // Filter for metadata.json files
-    const metadataFiles = listResult.value.filter(f => f.key.endsWith(`/${ProjectService.METADATA_FILENAME}`));
+    // Load each project's metadata (prefer canonical path, fallback to active path)
+    // NOTE: Canonical path projects/{id}/ has fresh data, active path may have stale data
+    const downloadPromises = Array.from(seenIds).map(async (projectId) => {
+      const canonicalPath = `${ProjectService.PROJECTS_PREFIX}/${projectId}/${ProjectService.METADATA_FILENAME}`;
+      const legacyPath = `${ProjectService.PROJECTS_PREFIX}/active/${projectId}/${ProjectService.METADATA_FILENAME}`;
+      const metadataPaths = [canonicalPath, legacyPath];
 
-    // Load each project in parallel
-    const downloadPromises = metadataFiles.map(file => 
-      this.storage.downloadFile(file.key)
-    );
-    
+      for (const metadataPath of metadataPaths) {
+        const result = await this.storage.downloadFile(metadataPath);
+        if (result.ok) {
+          // DUPLICATE DETECTION: Check if BOTH paths exist (indicates stale duplicate data)
+          const otherPath = metadataPath === canonicalPath ? legacyPath : canonicalPath;
+          const otherExists = await this.storage.exists(otherPath);
+          if (otherExists.ok && otherExists.value) {
+            console.warn('[DUPLICATE-DETECTED] Project exists in BOTH paths', {
+              projectId,
+              canonicalPath,
+              legacyPath,
+              readFrom: metadataPath,
+              duplicatePath: otherPath
+            });
+          }
+          return { projectId, buffer: result.value };
+        }
+      }
+      return null;
+    });
+
     const downloadResults = await Promise.all(downloadPromises);
-    
-    const projects: Project[] = [];
+
     for (const downloadResult of downloadResults) {
-      if (downloadResult.ok) {
-        try {
-          const parsed = this.decodeJson<Project>(downloadResult.value);
-          const project: Project = {
-            ...parsed,
-            createdAt: new Date((parsed as any).createdAt as any),
-            updatedAt: new Date((parsed as any).updatedAt as any),
-          };
-          
-          const projectOwner = project.ownerId || ProjectService.LEGACY_OWNER_ID;
+      if (!downloadResult) continue;
+      try {
+        const parsed = this.decodeJson<Project>(downloadResult.buffer);
+        const project: Project = {
+          ...parsed,
+          createdAt: new Date((parsed as any).createdAt as any),
+          updatedAt: new Date((parsed as any).updatedAt as any),
+        };
+        
+        const rawOwnerId = (project as any).ownerId ?? (project as any).owner_id ?? null;
+        const normalizedProjectOwner = normalizeOwnerToken(rawOwnerId ?? ProjectService.LEGACY_OWNER_ID);
+        const normalizedProjectEmail = normalizeOwnerToken((project as any).ownerEmail ?? (project as any).owner_email);
+        const projectOwner = rawOwnerId || ProjectService.LEGACY_OWNER_ID;
 
-          if (filter?.ownerId && projectOwner !== filter.ownerId) continue;
-
-          // Apply filters
-          if (filter?.status && project.status !== filter.status) continue;
-          if (filter?.framework && project.framework !== filter.framework) continue;
-          if (filter?.createdAfter && project.createdAt < filter.createdAfter) continue;
-          if (filter?.createdBefore && project.createdAt > filter.createdBefore) continue;
-          
-          projects.push(project);
-        } catch (error) {
-          // Skip invalid projects
+        if (hasOwnerAliasFilter) {
+          const matchesOwnerId = normalizedProjectOwner && ownerAliasSet.has(normalizedProjectOwner);
+          const matchesOwnerEmail = normalizedProjectEmail && ownerAliasSet.has(normalizedProjectEmail);
+          if (!matchesOwnerId && !matchesOwnerEmail) continue;
+        } else if (filter?.ownerId && projectOwner !== filter.ownerId) {
           continue;
         }
+
+        // Apply filters
+        if (filter?.status && project.status !== filter.status) continue;
+        if (filter?.framework && project.framework !== filter.framework) continue;
+        if (filter?.createdAfter && project.createdAt < filter.createdAfter) continue;
+        if (filter?.createdBefore && project.createdAt > filter.createdBefore) continue;
+        
+        projects.push(project);
+      } catch (error) {
+        continue;
       }
     }
 
@@ -370,8 +536,11 @@ export class ProjectService implements IProjectService {
     return `${ProjectService.PROJECTS_PREFIX}/${projectId}/${ProjectService.METADATA_FILENAME}`;
   }
 
-  private getProjectFilePath(projectId: string, sanitizedPath: string): string {
-    return `${ProjectService.PROJECTS_PREFIX}/${projectId}/${sanitizedPath}`;
+  private getProjectFilePath(projectId: string, sanitizedPath: string, prefix?: string): string {
+    const basePath = `${ProjectService.PROJECTS_PREFIX}/${projectId}`;
+    return prefix
+      ? `${basePath}/${prefix}${sanitizedPath}`
+      : `${basePath}/${sanitizedPath}`;
   }
 
   private getProjectDirectory(projectId: string): string {
@@ -393,6 +562,30 @@ export class ProjectService implements IProjectService {
   private decodeJson<T>(buffer: ArrayBuffer): T {
     return JSON.parse(new TextDecoder().decode(buffer)) as T;
   }
+
+  private normalizeUpdateInput(updates: UpdateProjectInput): UpdateProjectInput {
+    if (!updates.buildMetadata) return updates;
+    return {
+      ...updates,
+      buildMetadata: this.normalizeBuildMetadataDates(updates.buildMetadata),
+    };
+  }
+
+  private normalizeBuildMetadataDates(metadata: BuildMetadata): BuildMetadata {
+    const startedAt = metadata.startedAt 
+      ? new Date(metadata.startedAt) 
+      : undefined;
+    const completedAt = metadata.completedAt 
+      ? new Date(metadata.completedAt) 
+      : undefined;
+
+    return {
+      ...metadata,
+      ...(startedAt ? { startedAt } : {}),
+      ...(completedAt ? { completedAt } : {}),
+    };
+  }
+
   private sanitizePath(path: string): string {
     // Normalize separators to '/'
     let normalized = path.replace(/\\/g, '/');
@@ -442,6 +635,25 @@ export class ProjectService implements IProjectService {
     };
 
     return validTransitions[from]?.includes(to) || false;
+  }
+
+  /**
+   * Map Project status (11 values) to Manifest status (5 simplified values)
+   */
+  private mapProjectStatusToManifestStatus(status: ProjectStatus): ManifestProjectSummary['status'] {
+    const mapping: Record<string, ManifestProjectSummary['status']> = {
+      'pending': 'pending',
+      'analyzing': 'pending',
+      'scaffolding': 'queueing',
+      'scaffolded': 'queueing',
+      'queueing': 'queueing',
+      'queued': 'queueing',
+      'building': 'building',
+      'deploying': 'building',
+      'deployed': 'deployed',
+      'failed': 'failed'
+    };
+    return mapping[status] || 'pending';
   }
 
   private getContentType(path: string): string {

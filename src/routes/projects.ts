@@ -1,5 +1,5 @@
 /**
- * TASK-028: Multi-Project Repository Management API Routes
+ * Multi-Project Repository Management API Routes
  * 
  * Provides REST API endpoints for multi-project management functionality:
  * - GET /api/projects - List all projects

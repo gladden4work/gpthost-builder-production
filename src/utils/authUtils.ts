@@ -1,6 +1,6 @@
 /**
  * Authentication utilities for GPTHost API
- * TASK-029: Environment Token Auth
+ * Environment Token Auth
  *
  * Provides secure token validation with constant-time comparison
  * and proper Bearer token format handling.
@@ -10,7 +10,7 @@
 
 import { createLogger } from './logger';
 
-export type AuthType = 'legacy-token' | 'supabase-jwt' | 'test-bypass';
+export type AuthType = 'legacy-token' | 'supabase-jwt' | 'test-bypass' | 'super-admin-bearer';
 
 export interface AuthenticatedUser {
   id: string;
@@ -447,7 +447,11 @@ export async function validateToken(authHeader: string | null, env: Env): Promis
         return {
           isValid: true,
           token: providedToken,
-          authType: 'legacy-token'
+          authType: 'legacy-token',
+          user: {
+            id: 'legacy-single-tenant',
+            role: 'authenticated'
+          }
         };
       }
     }

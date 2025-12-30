@@ -1,5 +1,5 @@
 /**
- * TASK-027: Build Cache Optimization - Cache Validation and Error Handling
+ * Build Cache Optimization - Cache Validation and Error Handling
  * 
  * This utility provides comprehensive cache validation, corruption detection, and error handling
  * for the GitHub Actions cache system. It ensures cache integrity and graceful degradation.

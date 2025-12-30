@@ -1,5 +1,5 @@
 /**
- * TASK-025: Project Metadata Manager
+ * Project Metadata Manager
  * 
  * This utility manages project metadata stored in R2, specifically handling
  * build status updates and GitHub Actions integration metadata.

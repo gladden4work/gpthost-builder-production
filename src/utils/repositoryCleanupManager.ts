@@ -1,5 +1,5 @@
 /**
- * TASK-028: Repository Cleanup Manager
+ * Repository Cleanup Manager
  * 
  * Automated storage optimization and cleanup system for multi-project repositories.
  * Handles project lifecycle management, storage quota enforcement, and 

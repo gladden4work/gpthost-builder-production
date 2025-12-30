@@ -41,7 +41,11 @@ export async function validateV2Auth(
     const context: AuthSuccessContext = {
       isValid: true,
       token,
-      authType: 'test-bypass'
+      authType: 'test-bypass',
+      user: {
+        id: 'test-user-id',
+        role: 'authenticated'
+      }
     };
     (request as AuthenticatedRequest).authContext = context;
     return { response: null, context };

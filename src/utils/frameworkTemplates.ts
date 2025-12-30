@@ -1,5 +1,5 @@
 /**
- * TASK-014: Framework-Specific Scaffolding Templates
+ * Framework-Specific Scaffolding Templates
  * Enhanced framework-specific configurations, optimizations, and templates
  */
 

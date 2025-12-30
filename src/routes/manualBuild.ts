@@ -23,6 +23,8 @@
 import { BuildJob, FrameworkType, ProjectMetadata } from '../types/api';
 import { processBuildJob, detectBuildEnvironment, BuildJobResult } from '../utils/buildQueueConsumer';
 import { errorResponse, successResponse, corsResponse } from '../utils/responses';
+import { isManifestEnabled } from '../config/featureFlags';
+import { ManifestService } from '../services/ManifestService';
 
 
 /**
@@ -111,6 +113,18 @@ export async function manualBuildHandler(request: Request, env: Env): Promise<Re
 
     // Update project status to indicate build is starting
     await updateProjectStatus(projectId, 'building', env);
+    if (isManifestEnabled(env)) {
+      try {
+        const ownerId = (projectMetadata as any).ownerId || (projectMetadata as any).owner_id;
+        if (ownerId) {
+          const manifestService = new ManifestService(env);
+          await manifestService.updateBuildStatus(ownerId, projectId, 'building', buildJob.job_id);
+        }
+      } catch (manifestError) {
+        // Manifest is a performance cache; never fail the manual build path
+        console.error('[MANUAL-BUILD] Failed to update manifest build status', manifestError);
+      }
+    }
 
     // Detect build environment
     const buildType = await detectBuildEnvironment(env);
@@ -353,4 +367,3 @@ function calculateBuildTimeout(framework: FrameworkType): number {
   
   return timeouts[framework] || 180000; // Default 3 minutes
 }
-

@@ -13,6 +13,8 @@ import {
   ScaffoldedProject
 } from '../types/api';
 import { appendTimelineEvent } from './projectTimeline';
+import { isManifestEnabled } from '../config/featureFlags';
+import { ManifestService } from '../services/ManifestService';
 
 /**
  * Options for enqueuing a build job
@@ -50,6 +52,12 @@ export async function enqueueBuildJob(
         const st = (existing?.status || existing?.state || '').toString();
         const jid = existing?.metadata?.job_id;
         if (['queued', 'processing', 'building'].includes(st) && jid) {
+          try {
+            const metadata = await getProjectMetadata(projectId, env);
+            await updateManifestBuildStatusIfEnabled(metadata, projectId, env, jid);
+          } catch (manifestError) {
+            console.warn(`[ENQUEUE] Manifest update skipped for in-progress build ${projectId}:`, manifestError);
+          }
           console.info(`🔁 Build already in progress for ${projectId} (job ${jid}); skipping enqueue`);
           return {
             job_id: jid,
@@ -137,6 +145,9 @@ export async function enqueueBuildJob(
     // Create initial build status
     await createInitialBuildStatus(buildJob, env);
 
+    // Update per-owner manifest so dashboard shows "Building" immediately (staging runs manifest mode)
+    await updateManifestBuildStatusIfEnabled(projectMetadata, projectId, env, jobId);
+
     // Record timeline event
     await appendTimelineEvent(projectId, env, 'queued', { job_id: jobId });
 
@@ -145,6 +156,32 @@ export async function enqueueBuildJob(
   } catch (error) {
     console.error(`Failed to enqueue build job for project ${projectId}:`, error);
     throw error;
+  }
+}
+
+async function updateManifestBuildStatusIfEnabled(
+  projectMetadata: ProjectMetadata | null,
+  projectId: string,
+  env: Env,
+  buildId: string
+): Promise<void> {
+  if (!isManifestEnabled(env)) return;
+
+  const ownerId = (projectMetadata as any)?.ownerId || (projectMetadata as any)?.owner_id;
+  if (!ownerId) {
+    console.warn(`[ENQUEUE] Manifest enabled but ownerId missing for ${projectId}; skipping manifest build status update`);
+    return;
+  }
+
+  try {
+    const manifestService = new ManifestService(env);
+    await manifestService.updateBuildStatus(ownerId, projectId, 'building', buildId);
+  } catch (error) {
+    console.error('[ENQUEUE] Failed to update manifest build status', {
+      projectId,
+      ownerId,
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 

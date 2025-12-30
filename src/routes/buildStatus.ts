@@ -1,5 +1,5 @@
 /**
- * TASK-025: Build Status API Routes
+ * Build Status API Routes
  * 
  * Provides comprehensive build status tracking endpoints:
  * - GET /api/projects/{id}/status - Get current build status

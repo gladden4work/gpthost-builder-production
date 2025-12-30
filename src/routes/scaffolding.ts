@@ -574,19 +574,30 @@ export async function regenerateScaffoldingHandler(
 
 /**
  * Helper: Retrieve project metadata from R2
+ * Supports both canonical path (projects/{id}/) and legacy path (projects/active/{id}/)
  */
 async function getProjectMetadata(
   projectId: string,
   env: Env
 ): Promise<ProjectMetadata | null> {
   try {
-    const metadataKey = `projects/${projectId}/metadata.json`;
-    const metadataObject = await env.PROJECTS_BUCKET.get(metadataKey);
-    
+    // Try canonical path first (new projects via ProjectService)
+    const canonicalKey = `projects/${projectId}/metadata.json`;
+    let metadataObject = await env.PROJECTS_BUCKET.get(canonicalKey);
+
+    // Fallback to legacy active path (existing projects before refactor)
+    if (!metadataObject) {
+      const legacyKey = `projects/active/${projectId}/metadata.json`;
+      metadataObject = await env.PROJECTS_BUCKET.get(legacyKey);
+      if (metadataObject) {
+        console.info(`[SCAFFOLDING] Found project ${projectId} at legacy path: ${legacyKey}`);
+      }
+    }
+
     if (!metadataObject) {
       return null;
     }
-    
+
     return await metadataObject.json() as ProjectMetadata;
   } catch (error) {
     console.error(`Failed to retrieve project metadata for ${projectId}:`, error);

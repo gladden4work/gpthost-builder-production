@@ -1,5 +1,5 @@
 /**
- * TASK-035: Project Delete Endpoint Implementation
+ * Project Delete Endpoint Implementation
  * 
  * Comprehensive API endpoints for safe project deletion with recovery mechanisms:
  * - DELETE /api/projects/{id} - Single project deletion (soft/hard)

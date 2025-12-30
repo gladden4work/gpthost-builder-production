@@ -636,7 +636,7 @@ export class GitHubApiClient {
 
   /**
    * Extract and parse GitHub Actions logs ZIP file
-   * TASK-026: Real ZIP extraction implementation using JSZip
+   * Real ZIP extraction implementation using JSZip
    */
   private async extractAndParseLogsZip(zipBuffer: ArrayBuffer): Promise<GitHubActionLogLine[]> {
     try {
@@ -1077,7 +1077,7 @@ export class GitHubApiClient {
   /**
    * Generate GitHub Actions workflow YAML for builds
    * 
-   * TASK-022: Enhanced workflow with R2 upload, build matrix, and framework support
+   * Enhanced workflow with R2 upload, build matrix, and framework support
    */
   private generateBuildWorkflowYaml(): string {
     return `name: GPTHost Build Pipeline

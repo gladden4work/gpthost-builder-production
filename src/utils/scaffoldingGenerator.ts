@@ -1,5 +1,5 @@
 /**
- * TASK-012: Scaffolding Template Generator
+ * Scaffolding Template Generator
  * Core auto-scaffolding system that takes AI-generated components and generates
  * complete deployable applications with proper file structures and build configurations
  */
@@ -1355,7 +1355,7 @@ export function optimizeForAIPatterns(
 }
 
 /**
- * TASK-014: Helper function to provide default component structure
+ * Helper function to provide default component structure
  */
 function getDefaultComponentStructure(): ComponentStructure {
   return {
@@ -1402,7 +1402,7 @@ function getDefaultComponentStructure(): ComponentStructure {
 }
 
 /**
- * TASK-014: Enhanced package.json generation with framework-specific dependencies
+ * Enhanced package.json generation with framework-specific dependencies
  */
 export function enhancePackageJsonWithFrameworkDeps(
   packageJson: GeneratedPackageJson,
@@ -1455,7 +1455,7 @@ export function enhancePackageJsonWithFrameworkDeps(
 }
 
 /**
- * TASK-014: Generate React Error Boundary component for enhanced error handling
+ * Generate React Error Boundary component for enhanced error handling
  */
 function generateReactErrorBoundary(hasTypeScript: boolean): ScaffoldedFile {
   const extension = hasTypeScript ? 'tsx' : 'jsx';
@@ -1570,7 +1570,7 @@ export default ErrorBoundary`;
 }
 
 /**
- * TASK-014: Generate Vue error handler component
+ * Generate Vue error handler component
  */
 function generateVueErrorHandler(hasTypeScript: boolean): ScaffoldedFile {
   const extension = hasTypeScript ? 'vue' : 'vue';
@@ -1694,7 +1694,7 @@ export default defineComponent({
 }
 
 /**
- * TASK-014: Generate Vue composables utilities for complex applications
+ * Generate Vue composables utilities for complex applications
  */
 function generateVueComposables(hasTypeScript: boolean): ScaffoldedFile {
   const extension = hasTypeScript ? 'ts' : 'js';
@@ -1900,7 +1900,7 @@ export function useDarkMode() {
 }
 
 /**
- * TASK-014: Generate Svelte stores for state management
+ * Generate Svelte stores for state management
  */
 function generateSvelteStores(hasTypeScript: boolean): ScaffoldedFile {
   const extension = hasTypeScript ? 'ts' : 'js';
@@ -2107,7 +2107,7 @@ export const notifications = createNotificationStore()`;
 }
 
 /**
- * TASK-014: Generate Svelte utility functions
+ * Generate Svelte utility functions
  */
 function generateSvelteUtils(hasTypeScript: boolean): ScaffoldedFile {
   const extension = hasTypeScript ? 'ts' : 'js';
@@ -2360,7 +2360,7 @@ export const formatUtils = {
 }
 
 /**
- * TASK-014: Select optimal template configuration based on component analysis
+ * Select optimal template configuration based on component analysis
  */
 function selectOptimalTemplateConfiguration(
   componentStructure: ComponentStructure,
@@ -2464,7 +2464,7 @@ function selectOptimalTemplateConfiguration(
 }
 
 /**
- * TASK-014: Enhanced build configuration with intelligent optimization selection
+ * Enhanced build configuration with intelligent optimization selection
  */
 function generateEnhancedBuildConfiguration(
   framework: FrameworkType,

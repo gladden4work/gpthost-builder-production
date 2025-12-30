@@ -180,6 +180,44 @@ export class MonitoredStorageService implements IStorageService {
   }
   
   /**
+   * List prefixes with monitoring
+   */
+  async listPrefixes(prefix: string): Promise<Result<string[], StorageError>> {
+    const start = performance.now();
+    const operation = 'listPrefixes';
+    
+    try {
+      const result = await this.wrapped.listPrefixes(prefix);
+      const duration = performance.now() - start;
+      
+      ServiceMetrics.recordOperation('StorageService', operation, duration, result.ok);
+      this.logMetrics(operation, { prefix, duration, success: result.ok });
+      
+      if (duration > 100) {
+        console.warn('[StorageMonitor Warning]', {
+          operation,
+          duration: Math.round(duration),
+          prefix,
+          threshold: 100,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      const duration = performance.now() - start;
+      ServiceMetrics.recordOperation('StorageService', operation, duration, false);
+      this.logError(operation, error as Error, { prefix });
+      return Err(new StorageError(
+        StorageErrorCode.OPERATION_FAILED,
+        `MonitoredStorageService.${operation} error: ${(error as Error).message}`,
+        { operation, prefix },
+        error as Error
+      ));
+    }
+  }
+  
+  /**
    * Delete with monitoring
    */
   async deleteFile(path: string): Promise<Result<void, StorageError>> {

@@ -604,7 +604,7 @@ function getMostCommonCategory(stats: ErrorStatistics): ErrorCategory {
 }
 
 /**
- * TASK-026: Get supported actions for GitHub Actions errors
+ * Get supported actions for GitHub Actions errors
  */
 function getGitHubSupportedActions(
   analysis: any,

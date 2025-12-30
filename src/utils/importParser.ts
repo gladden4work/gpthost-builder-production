@@ -1,5 +1,5 @@
 /**
- * TASK-009: Comprehensive Import Parser
+ * Comprehensive Import Parser
  * Advanced parsing of JavaScript/TypeScript import statements with classification
  * and dependency analysis for AI-generated code patterns
  */

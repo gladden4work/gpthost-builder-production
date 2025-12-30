@@ -1,5 +1,5 @@
 /**
- * TASK-027: Build Cache Optimization - Intelligent Cache Key Generation
+ * Build Cache Optimization - Intelligent Cache Key Generation
  * 
  * This utility provides intelligent cache key generation strategies for GitHub Actions builds.
  * It creates optimized cache keys based on project dependencies, framework type, and build context.

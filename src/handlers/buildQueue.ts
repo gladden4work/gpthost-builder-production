@@ -33,6 +33,8 @@ import {
   updateProjectStatus, 
   extractProjectIdFromPath 
 } from '../utils/projectHelpers';
+import { isManifestEnabled } from '../config/featureFlags';
+import { ManifestService } from '../services/ManifestService';
 
 /**
  * Handle build queue requests
@@ -117,6 +119,20 @@ export async function buildQueueHandler(
 
     // Create initial build status
     await createInitialBuildStatus(buildJob, env);
+
+    // Update per-owner manifest so dashboards show "Building" immediately
+    if (isManifestEnabled(env)) {
+      try {
+        const ownerId = (projectMetadata as any).ownerId || (projectMetadata as any).owner_id;
+        if (ownerId) {
+          const manifestService = new ManifestService(env);
+          await manifestService.updateBuildStatus(ownerId, projectId, 'building', buildJob.job_id);
+        }
+      } catch (manifestError) {
+        // Manifest is a performance cache; never fail the build queue path
+        console.error('[BUILD-QUEUE] Failed to update manifest build status', manifestError);
+      }
+    }
 
     // Return success response
     const response: BuildQueueResponse = {

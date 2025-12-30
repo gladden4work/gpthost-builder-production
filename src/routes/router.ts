@@ -137,6 +137,15 @@ import type { AuthenticatedRequest } from '../utils/authUtils';
 // SECURITY FIX (Week 2): Import new security middlewares
 import { globalRateLimitMiddleware, addRateLimitHeaders } from '../middleware/globalRateLimit';
 import { addSecurityHeaders } from '../middleware/securityHeaders';
+import {
+  RESOURCE_PROXY_PREFIX,
+  RESOURCE_PROXY_SW_PATH,
+  handleResourceProxyRequest,
+  shouldServeResourceProxySW,
+  getResourceProxyServiceWorker
+} from './resourceProxy';
+import { isResourceProxyEnabled } from '../utils/resourceProxy';
+import type { ExecutionContext } from '@cloudflare/workers-types';
 
 export type RouteHandler = (request: Request, env: Env) => Promise<Response>;
 
@@ -210,10 +219,13 @@ const routes: Route[] = [
  * Main router function
  * Matches incoming requests to appropriate handlers
  */
-export async function router(request: Request, env: Env): Promise<Response> {
+export async function router(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const method = request.method;
   const path = url.pathname;
+
+  // DEBUG: Log every request path
+  console.log('[ROUTER] Incoming request:', method, path);
 
   // SECURITY FIX (Week 1 Phase 2.3): Conditionally register debug routes
   // Only register debug endpoints when ENABLE_DEBUG_ENDPOINTS flag is true
@@ -247,6 +259,40 @@ export async function router(request: Request, env: Env): Promise<Response> {
     return addSecurityHeaders(globalRateLimitResponse, env, request);
   }
 
+  // Serve the resource proxy service worker (public)
+  if (shouldServeResourceProxySW(request)) {
+    console.log('[ROUTER] Resource proxy SW path detected');
+    const proxyEnabled = isResourceProxyEnabled(env);
+    console.log('[ROUTER] isResourceProxyEnabled:', proxyEnabled);
+    if (!proxyEnabled) {
+      // Debug: return why it's disabled
+      const flags = (await import('../config/featureFlags')).getFeatureFlags(env);
+      const debugInfo = {
+        error: 'Resource proxy disabled',
+        hasSecret: !!env.RESOURCE_PROXY_SIGNING_SECRET,
+        flagsUseResourceProxy: flags.useResourceProxy,
+        explicitFlag: env.ENABLE_RESOURCE_PROXY === 'true',
+        featureFlagsRaw: typeof env.FEATURE_FLAGS === 'string' ? 'exists' : 'missing',
+      };
+      return addSecurityHeaders(
+        new Response(JSON.stringify(debugInfo, null, 2), { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json' }
+        }), 
+        env, 
+        request
+      );
+    }
+    const swUrl = new URL(request.url);
+    const projectId = swUrl.searchParams.get('project_id') || '';
+    const token = swUrl.searchParams.get('token') || '';
+    if (!projectId || !token) {
+      return addSecurityHeaders(new Response('Unauthorized', { status: 401 }), env, request);
+    }
+    console.log('[ROUTER] Serving resource proxy SW for project:', projectId);
+    return addSecurityHeaders(getResourceProxyServiceWorker(projectId, token), env, request);
+  }
+
   // Handle CORS preflight requests
   if (method === 'OPTIONS') {
     // Special handling for v2 API CORS
@@ -261,6 +307,12 @@ export async function router(request: Request, env: Env): Promise<Response> {
     return addSecurityHeaders(corsResp, env, request);
   }
   
+  // Handle admin API routes (Phase 1: Super Admin Dashboard)
+  if (path.startsWith('/api/admin/')) {
+    const { handleAdminRoutes } = await import('./api/admin');
+    return await handleAdminRoutes(request, env, path);
+  }
+
   // Handle v2 API routes
   if (path.startsWith('/api/v2/')) {
     // Apply CORS wrapper to v2 routes
@@ -319,7 +371,23 @@ export async function router(request: Request, env: Env): Promise<Response> {
   // Debug endpoints now require authentication (only registered when ENABLE_DEBUG_ENDPOINTS=true)
   // GitHub callbacks have their own authentication (Bearer token with GITHUB_CALLBACK_TOKEN)
   const isGitHubCallback = path === '/api/github/build-callback' || path === '/api/v2/github/build-callback';
-  const isPublicSite = path.startsWith('/sites/');
+
+  // PHASE 1: Detect subdomain requests (non-API requests via subdomain routing)
+  // CRITICAL: Check X-Original-Host first (set by router worker to preserve subdomain)
+  // The Host header gets overwritten to workers.dev by the proxy fetch() call
+  const hostname = request.headers.get('x-original-host') ||
+                   request.headers.get('host') ||
+                   new URL(request.url).hostname;
+  const baseDomain = env.BASE_DOMAIN || 'gpthost.online';
+  // CRITICAL: Use ?? instead of || so empty string (production) is valid
+  const subdomainSuffix = env.SUBDOMAIN_SUFFIX ?? '';
+  const isSubdomainRequest = env.ENABLE_SUBDOMAIN_ROUTING === 'true' &&
+                             hostname.includes(`${subdomainSuffix}.${baseDomain}`) &&
+                             !path.startsWith('/api/');
+  const isResourceProxyPath = path.startsWith(RESOURCE_PROXY_PREFIX) || path.startsWith(RESOURCE_PROXY_SW_PATH);
+
+  // Exempt public site content (path-based OR subdomain-routed) and GitHub callbacks from API auth
+  const isPublicSite = path.startsWith('/sites/') || isSubdomainRequest || isResourceProxyPath;
 
   // Exempt public site content and GitHub callbacks from API auth
   if (!isGitHubCallback && !isPublicSite) {
@@ -341,6 +409,11 @@ export async function router(request: Request, env: Env): Promise<Response> {
       const corsRateLimitResp = addCorsHeaders(rateLimitResponse, request, env);
       return addSecurityHeaders(corsRateLimitResp, env, request); // Rate limit exceeded, return CORS-safe 429 with security headers
     }
+  }
+
+  // Public resource proxy route (no auth)
+  if (isResourceProxyPath) {
+    return addSecurityHeaders(await handleResourceProxyRequest(request, env, ctx), env, request);
   }
 
   // Find matching route (exact match first)

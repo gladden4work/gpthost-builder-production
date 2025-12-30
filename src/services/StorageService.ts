@@ -37,6 +37,7 @@ export interface IStorageService {
   uploadFile(path: string, content: ArrayBuffer, metadata?: Record<string, string>): Promise<Result<void, StorageError>>;
   downloadFile(path: string): Promise<Result<ArrayBuffer, StorageError>>;
   listFiles(prefix: string, options?: ListOptions): Promise<Result<StorageFile[], StorageError>>;
+  listPrefixes(prefix: string): Promise<Result<string[], StorageError>>;
   deleteFile(path: string): Promise<Result<void, StorageError>>;
   copyDirectory(source: string, destination: string): Promise<Result<void, StorageError>>;
   exists(path: string): Promise<Result<boolean, StorageError>>;
@@ -195,6 +196,40 @@ export class StorageService implements IStorageService {
         StorageErrorCode.OPERATION_FAILED,
         `Failed to list files with prefix ${prefix}: ${(error as Error).message}`,
         { operation: 'listFiles', prefix },
+        error as Error
+      ));
+    }
+  }
+
+  /**
+   * List common prefixes (directories) one level under a prefix.
+   * Useful for enumerating project folders without traversing every object.
+   */
+  async listPrefixes(prefix: string): Promise<Result<string[], StorageError>> {
+    try {
+      const prefixes: string[] = [];
+      let cursor: string | undefined;
+
+      do {
+        const page = await this.bucket.list({
+          prefix,
+          delimiter: '/',
+          cursor,
+        });
+
+        if (page.delimitedPrefixes) {
+          prefixes.push(...page.delimitedPrefixes);
+        }
+
+        cursor = page.truncated ? page.cursor : undefined;
+      } while (cursor);
+
+      return Ok(prefixes);
+    } catch (error) {
+      return Err(new StorageError(
+        StorageErrorCode.OPERATION_FAILED,
+        `Failed to list prefixes for ${prefix}: ${(error as Error).message}`,
+        { operation: 'listPrefixes', prefix },
         error as Error
       ));
     }

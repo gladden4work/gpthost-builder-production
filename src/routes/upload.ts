@@ -7,6 +7,7 @@ import { successResponse, errorResponse } from '../utils/responses';
 import { ProjectMetadata, FileMetadata, UploadResponse, ProjectAnalysis } from '../types/api';
 import { validateFile } from '../utils/fileValidation';
 import { analyzeFile, aggregateProjectAnalysis } from '../utils/fileAnalysis';
+import { sanitizeProjectName } from '../utils/projectName';
 
 /**
  * Handle file upload requests
@@ -38,17 +39,21 @@ export async function uploadHandler(request: Request, env: Env): Promise<Respons
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
     // Sanitize and validate inputs
-    const projectName = formData.get('project_name')?.toString()?.trim()?.slice(0, 100);
+    const rawProjectName = formData.get('project_name')?.toString();
+    const projectNameResult = sanitizeProjectName(rawProjectName);
     const description = formData.get('description')?.toString()?.trim()?.slice(0, 500);
     
     // Validate project name
-    if (!projectName || projectName.length === 0) {
+    if (projectNameResult.error) {
       return errorResponse(
         'INVALID_PROJECT_NAME',
-        'Project name is required and must be non-empty',
-        400
+        projectNameResult.error,
+        400,
+        { received: rawProjectName, sanitized: projectNameResult.sanitized }
       );
     }
+
+    const projectName = projectNameResult.sanitized;
 
     // Validate that files were uploaded
     if (!files || files.length === 0) {

@@ -29,6 +29,8 @@ export interface Env {
   
   // Durable Objects
   PROJECT_STATE?: DurableObjectNamespace;
+  MANIFEST_DO?: DurableObjectNamespace;
+  PROXY_USAGE_DO?: DurableObjectNamespace;
   
   // Environment
   ENVIRONMENT?: 'development' | 'staging' | 'production';
@@ -41,6 +43,10 @@ export interface Env {
   USE_NEW_BUILD_SERVICE?: string;
   USE_NEW_DEPLOY_SERVICE?: string;
   USE_MONITORING?: string;
+  ENABLE_RESOURCE_PROXY?: string;
+  FEATURE_RESOURCE_PROXY?: string;
+  RESOURCE_PROXY_SIGNING_SECRET?: string;
+  PROXY_STATS_BACKEND?: string;
 
   // Security Flags (Week 1 Security Audit)
   ENABLE_EMERGENCY_ENDPOINTS?: string;
@@ -52,4 +58,9 @@ export interface Env {
 
   // CORS Configuration
   ALLOWED_ORIGINS?: string;
+
+  // Super Admin Configuration (Phase 1)
+  SUPER_ADMIN_EMAILS?: string; // Comma-separated list of admin emails
+  SUPER_ADMIN_IDS?: string; // Comma-separated list of admin user IDs
+  SUPER_ADMIN_BEARER?: string; // Emergency ops-only bearer token
 }

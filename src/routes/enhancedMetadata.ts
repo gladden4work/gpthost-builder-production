@@ -1,5 +1,5 @@
 /**
- * TASK-031: Enhanced Metadata API Routes
+ * Enhanced Metadata API Routes
  * 
  * REST API endpoints for comprehensive project metadata management:
  * - GET /api/metadata/{id} - Get enhanced metadata for a project

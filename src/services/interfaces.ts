@@ -5,6 +5,7 @@
 
 import { Result } from '../lib/result';
 import { GitHubError, BuildError, ProjectError, StorageError } from '../lib/errors';
+import type { UpdateProjectInput } from '../domain/models';
 
 /**
  * Project Status (from domain models)
@@ -45,6 +46,7 @@ export interface Project {
   framework: FrameworkType;
   status: ProjectStatus;
   files: ProjectFile[];
+  ownerId?: string;
   createdAt: Date;
   updatedAt: Date;
   deploymentUrl?: string;
@@ -225,6 +227,7 @@ export interface IStorageService {
   downloadFile(key: string): Promise<Result<ArrayBuffer, StorageError>>;
   deleteFile(key: string): Promise<Result<void, StorageError>>;
   listFiles(prefix: string): Promise<Result<string[], StorageError>>;
+  listPrefixes?(prefix: string): Promise<Result<string[], StorageError>>;
   fileExists(key: string): Promise<Result<boolean, StorageError>>;
   copyDirectory(source: string, destination: string): Promise<Result<void, StorageError>>;
   exists(path: string): Promise<Result<boolean, StorageError>>;
@@ -237,7 +240,7 @@ export interface IStorageService {
 export interface IProjectService {
   createProject(input: any): Promise<Result<Project, ProjectError>>;
   getProject(projectId: string): Promise<Result<Project, ProjectError>>;
-  updateProject(projectId: string, updates: any): Promise<Result<Project, ProjectError>>;
+  updateProject(projectId: string, updates: UpdateProjectInput): Promise<Result<Project, ProjectError>>;
   deleteProject(projectId: string): Promise<Result<void, ProjectError>>;
   listProjects(filter?: any): Promise<Result<any, ProjectError>>;
 }

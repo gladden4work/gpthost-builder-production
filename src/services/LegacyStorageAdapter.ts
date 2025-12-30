@@ -64,6 +64,17 @@ export class LegacyStorageAdapter implements IStorageService {
       { operation: 'listFiles', prefix, adapter: 'legacy' }
     ));
   }
+
+  /**
+   * Legacy list prefixes - placeholder implementation
+   */
+  async listPrefixes(prefix: string): Promise<Result<string[], StorageError>> {
+    return Err(new StorageError(
+      StorageErrorCode.OPERATION_FAILED,
+      'Legacy storage adapter: listPrefixes not implemented',
+      { operation: 'listPrefixes', prefix, adapter: 'legacy' }
+    ));
+  }
   
   /**
    * Legacy delete - placeholder implementation

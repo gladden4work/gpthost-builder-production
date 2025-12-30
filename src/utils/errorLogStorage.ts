@@ -1,5 +1,5 @@
 /**
- * Error Log Storage System - TASK-026
+ * Error Log Storage System
  * 
  * Comprehensive R2 storage system for GitHub Actions error logs and analysis.
  * Provides structured storage, retrieval, and management of build error logs

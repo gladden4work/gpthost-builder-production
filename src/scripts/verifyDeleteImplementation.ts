@@ -1,5 +1,5 @@
 /**
- * TASK-035: Project Delete Implementation Verification
+ * Project Delete Implementation Verification
  *
  * Simple verification script to test project deletion functionality
  * without complex test runner dependencies.

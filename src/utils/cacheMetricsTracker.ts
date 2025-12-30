@@ -1,5 +1,5 @@
 /**
- * TASK-027: Build Cache Optimization - Cache Metrics Tracking System
+ * Build Cache Optimization - Cache Metrics Tracking System
  * 
  * This utility provides comprehensive cache performance monitoring for GitHub Actions builds.
  * It tracks cache hit rates, performance improvements, and optimization effectiveness.

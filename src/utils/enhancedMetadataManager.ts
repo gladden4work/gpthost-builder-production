@@ -1,5 +1,5 @@
 /**
- * TASK-031: Enhanced Project Metadata Storage Manager
+ * Enhanced Project Metadata Storage Manager
  * 
  * Comprehensive metadata storage system that extends the existing projectMetadataManager
  * with advanced features for project lifecycle tracking, analytics, search, and versioning.

@@ -173,6 +173,40 @@ export function validatePastedContent(content: string): {
       }
     };
   }
+
+  // Guardrail: reject Markdown/MDX-like content pasted into the code endpoint.
+  // This commonly happens when users paste documentation (e.g. "# Overview", blockquotes, MDX tags like <Note>).
+  // It will later fail TSX parsing with "Invalid character" and get logged as unsupported_code.
+  // IMPORTANT: Do not use "\s" here because it includes newlines.
+  // We only want to match Markdown patterns within a single line.
+  const markdownHeadingPattern = /(^|\n)[^\S\r\n]*#{1,6}[^\S\r\n]+\S/;
+  const markdownBlockquotePattern = /(^|\n)[^\S\r\n]*>[^\S\r\n]+\S/;
+  // NOTE: Do NOT treat "- ..." list-like lines as Markdown.
+  // JSX text nodes (e.g. button label "- {step}") frequently begin with "- ",
+  // and a broad list regex would reject valid React components.
+  const markdownCodeFencePattern = /(^|\n)[^\S\r\n]*```/;
+  const mdxTagPattern = /<\s*(?:Note|Info|Warning|CardGroup|Card|Frame)\b/;
+
+  const looksLikeMarkdownOrMdx =
+    markdownHeadingPattern.test(content) ||
+    markdownBlockquotePattern.test(content) ||
+    markdownCodeFencePattern.test(content) ||
+    mdxTagPattern.test(content);
+
+  // Only trigger this guardrail when the paste is otherwise likely intended as a document.
+  // Heuristic: it has markdown-ish structure AND it doesn't contain a clear HTML document.
+  if (looksLikeMarkdownOrMdx && !/<!DOCTYPE\s+html>|<html\b/i.test(content)) {
+    return {
+      isValid: false,
+      errorCode: 'MARKDOWN_MDX_NOT_SUPPORTED',
+      message:
+        'Looks like Markdown/MDX documentation content. The paste endpoint expects runnable React/Vue/Svelte/HTML code (JSX/TSX), not Markdown headings like "# Overview".',
+      details: {
+        hint:
+          'Convert headings to JSX/HTML (e.g. "# Overview" → <h1>Overview</h1>) and replace MDX components like <Note> with real React components or plain <div> callouts.'
+      }
+    };
+  }
   
   // Check for suspicious content patterns
   const suspiciousPatterns = [

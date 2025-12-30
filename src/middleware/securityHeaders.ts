@@ -23,39 +23,50 @@ function isSSEResponse(response: Response): boolean {
 
 /**
  * Generate Content Security Policy based on environment
+ * 
+ * NOTE: Our product goal is "unblock by default" for AI-generated code.
+ * So we allow external resources over HTTPS broadly (scripts, styles, fonts, images).
+ *
+ * Security posture still relies on:
+ * - tight defaults (default-src 'self')
+ * - no framing (frame-ancestors 'none')
+ * - restricted base/form
  */
 function generateCSP(env: Env): string {
   const isProduction = env.ENVIRONMENT === 'production';
 
-  // Base CSP directives
+  // Base CSP directives (allow-by-default HTTPS for external assets)
   const directives = [
     "default-src 'self'",
-    // Allow inline styles for React components (styled-components, emotion, Tailwind)
-    "style-src 'self' 'unsafe-inline'",
-    // Allow images from self, data URIs, and HTTPS
-    "img-src 'self' data: https:",
-    // Allow fonts from self and data URIs
-    "font-src 'self' data:",
-    // Allow connections to self, Supabase, and R2 buckets
-    `connect-src 'self' https://najxejmynucgnqsgqvek.supabase.co ${env.WORKER_URL || 'https://*.workers.dev'} https://*.r2.cloudflarestorage.com`,
+    // Allow inline styles for React components + HTTPS styles
+    "style-src 'self' 'unsafe-inline' https:",
+    // Allow images from self, data URIs, blobs, and HTTPS
+    "img-src 'self' data: blob: https:",
+    // Allow fonts from self, data URIs, and HTTPS
+    "font-src 'self' data: https:",
+    // Allow connections to self, Supabase, R2, and any HTTPS/WSS
+    `connect-src 'self' https: wss: https://najxejmynucgnqsgqvek.supabase.co ${env.WORKER_URL || 'https://*.workers.dev'} https://*.r2.cloudflarestorage.com`,
+    // Allow media from self, blobs, and HTTPS
+    "media-src 'self' blob: https:",
+    // Allow workers from self and blobs (for service workers, web workers)
+    "worker-src 'self' blob:",
+    // Disallow plugins/Flash/etc.
+    "object-src 'none'",
     // Prevent framing (also covered by X-Frame-Options)
     "frame-ancestors 'none'",
     // Restrict base URI
     "base-uri 'self'",
     // Restrict form actions
     "form-action 'self'",
-    // Upgrade insecure requests in production
   ];
 
   if (isProduction) {
-    // Production: Stricter script policy (would require nonces for inline scripts)
-    // For now, allow unsafe-inline and unsafe-eval for React compatibility
-    directives.splice(1, 0, "script-src 'self' 'unsafe-inline' 'unsafe-eval'");
+    // Production: allow scripts from self + any HTTPS (unblock-by-default)
+    directives.splice(1, 0, "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:");
     directives.push("upgrade-insecure-requests");
   } else {
-    // Development: More permissive for React dev mode and hot reload
-    directives.splice(1, 0, "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*");
-    directives.push("connect-src 'self' http://localhost:* ws://localhost:* https://najxejmynucgnqsgqvek.supabase.co");
+    // Development: Also allow localhost for dev tools
+    directives.splice(1, 0, "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http://localhost:*");
   }
 
   return directives.join('; ');

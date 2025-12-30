@@ -1,5 +1,5 @@
 /**
- * TASK-028: Multi-Project Repository Management
+ * Multi-Project Repository Management
  * 
  * Core orchestration system for managing multiple concurrent projects within
  * the same GitHub repository. Provides project isolation, resource management,

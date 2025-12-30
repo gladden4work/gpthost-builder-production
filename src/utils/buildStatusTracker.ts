@@ -1,5 +1,5 @@
 /**
- * TASK-025: Build Status Polling System
+ * Build Status Polling System
  * 
  * This utility provides comprehensive GitHub Actions workflow status tracking
  * with intelligent polling intervals, rate limit handling, and real-time updates.
@@ -677,7 +677,7 @@ export class BuildStatusTracker {
   }
 
   /**
-   * TASK-026: Handle build failure with comprehensive error analysis
+   * Handle build failure with comprehensive error analysis
    */
   private async handleBuildFailure(
     repositoryFullName: string,
@@ -864,7 +864,7 @@ export class BuildStatusTracker {
   }
 
   /**
-   * TASK-027: Process and record build cache metrics
+   * Process and record build cache metrics
    */
   private async processBuildCacheMetrics(
     enhancedStatus: EnhancedBuildStatus,
@@ -952,7 +952,7 @@ export class BuildStatusTracker {
   }
 
   /**
-   * TASK-027: Get cache performance analysis for a project
+   * Get cache performance analysis for a project
    */
   async getCachePerformanceAnalysis(
     projectId: string,

@@ -82,7 +82,9 @@ export class SubdomainService implements ISubdomainService {
       throw new Error('SUBDOMAIN_MAPPINGS KV namespace not configured');
     }
     this.kv = env.SUBDOMAIN_MAPPINGS;
-    this.subdomainSuffix = env.SUBDOMAIN_SUFFIX || '-staging';
+    // CRITICAL: Use ?? instead of || so empty string (production) is valid
+    // Production must have SUBDOMAIN_SUFFIX="" (empty), staging has "-staging"
+    this.subdomainSuffix = env.SUBDOMAIN_SUFFIX ?? '';
   }
 
   /**

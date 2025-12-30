@@ -1,5 +1,5 @@
 /**
- * Deployment Manager - TASK-018
+ * Deployment Manager
  * 
  * Core system for managing deployment pipeline that takes built applications 
  * from BUILDS_BUCKET and serves them as live websites from DEPLOYMENTS_BUCKET.

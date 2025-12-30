@@ -1,5 +1,5 @@
 /**
- * TASK-031: Metadata Migration Utility
+ * Metadata Migration Utility
  * 
  * Utility functions to migrate existing basic project metadata to the new
  * enhanced metadata system. Provides seamless transition and backward compatibility.

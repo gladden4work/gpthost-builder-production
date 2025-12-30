@@ -1,5 +1,5 @@
 /**
- * TASK-028: Project Lifecycle Manager
+ * Project Lifecycle Manager
  * 
  * Manages the complete lifecycle of projects within the multi-project repository.
  * Handles project creation, transitions between states (active -> archived -> deleted),

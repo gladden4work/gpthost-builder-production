@@ -1,5 +1,5 @@
 /**
- * TASK-013: Component Wrapper Generator
+ * Component Wrapper Generator
  * Intelligent component wrapper system that analyzes components and generates
  * appropriate App structures with sample props and provider integration
  */

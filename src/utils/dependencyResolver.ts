@@ -1,5 +1,5 @@
 /**
- * TASK-011: Core Dependency Resolution Engine
+ * Core Dependency Resolution Engine
  * Advanced dependency resolution with version conflict detection,
  * NPM registry integration, and intelligent package.json generation
  */

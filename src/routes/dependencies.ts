@@ -1,5 +1,5 @@
 /**
- * TASK-011: Dependency Resolution API Endpoints
+ * Dependency Resolution API Endpoints
  * REST endpoints for dependency resolution, package.json generation,
  * and version conflict management
  */

@@ -9,7 +9,12 @@ import { handleGitHubCallback } from './github';
 import { handleBuildUpload } from './github/upload';
 import { handleV2CreateProject, handleV2GetProject } from './projects';
 import { handleV2QueueBuild, handleV2GetBuildStatus } from './build';
-import { handleV2SubdomainCheck, handleV2SubdomainReserve, handleV2SubdomainGet, handleV2SubdomainDelete } from './subdomains';
+import {
+  handleV2SubdomainCheck,
+  handleV2SubdomainReserve,
+  handleV2SubdomainGet,
+  handleV2SubdomainDelete
+} from './subdomains';
 import { v2Error } from '../../../middleware/envelope';
 
 /**
@@ -72,13 +77,13 @@ export async function routeV2Api(
     return handleV2SubdomainReserve(request, env);
   }
 
-  // Match subdomain project pattern
+  // Match project ID pattern for subdomain lookup
   const subdomainProjectMatch = route.match(/^\/subdomains\/project\/([^\/]+)$/);
   if (subdomainProjectMatch && method === 'GET') {
     return handleV2SubdomainGet(request, env, subdomainProjectMatch[1]);
   }
 
-  // Match subdomain delete pattern
+  // Match subdomain name pattern for deletion
   const subdomainDeleteMatch = route.match(/^\/subdomains\/([^\/]+)$/);
   if (subdomainDeleteMatch && method === 'DELETE') {
     return handleV2SubdomainDelete(request, env, subdomainDeleteMatch[1]);

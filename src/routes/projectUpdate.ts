@@ -1,5 +1,5 @@
 /**
- * TASK-034: Project Update Endpoint Implementation
+ * Project Update Endpoint Implementation
  * 
  * Comprehensive API endpoints for updating project metadata and settings:
  * - PUT /api/projects/{id} - Full project update

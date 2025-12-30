@@ -1,5 +1,5 @@
 /**
- * TASK-028: Project Isolation Manager
+ * Project Isolation Manager
  * 
  * Ensures complete isolation between projects during concurrent builds.
  * Prevents cross-project interference, manages project-specific resources,

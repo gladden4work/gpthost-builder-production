@@ -1,10 +1,15 @@
 /**
- * URL Router - TASK-019
- * 
+ * URL Router
+ *
  * Core URL routing utilities for serving deployed websites from R2.
  * Handles parsing of request URLs, project ID extraction, and path resolution
  * for serving static sites with proper fallbacks and SPA support.
+ *
+ * Enhanced with subdomain routing support for *-staging.gpthost.online pattern
  */
+
+import { SubdomainService } from '../services/SubdomainService';
+import type { Env } from '../types/env';
 
 /**
  * Parsed URL components for routing
@@ -20,6 +25,10 @@ export interface ParsedURL {
   isRootRequest: boolean;
   /** Custom domain if applicable */
   customDomain?: string;
+  /** Subdomain extracted from hostname (for subdomain routing) */
+  subdomain?: string;
+  /** Routing mode: path-based, subdomain, or custom domain */
+  routingMode: 'path' | 'subdomain' | 'custom';
 }
 
 /**
@@ -118,63 +127,162 @@ const CACHE_CONTROL: Record<string, string> = {
 
 /**
  * Security headers for all responses
+ *
+ * NOTE: "Unblock by default" for AI-generated code.
+ * We allow external assets over HTTPS broadly (scripts/styles/fonts/images).
  */
 export const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'X-XSS-Protection': '1; mode=block',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;"
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: wss:; media-src 'self' blob: https:; worker-src 'self' blob:; object-src 'none';"
 };
 
 /**
- * Parse incoming request URL to extract routing information
+ * Reserved subdomain names that cannot be used by users
  */
-export function parseURL(request: Request, config: SiteRoutingConfig): ParsedURL {
+const RESERVED_SUBDOMAINS = new Set([
+  'www', 'api', 'admin', 'app', 'mail', 'blog',
+  'dev', 'staging', 'test', 'demo', 'status', 'docs',
+  'cdn', 'assets', 'static', 'help', 'support'
+]);
+
+/**
+ * Extract subdomain from hostname
+ * Returns null for apex domain, www, or non-matching domains
+ *
+ * @example
+ * extractSubdomain('todo-app-staging.gpthost.online', 'gpthost.online') // 'todo-app-staging'
+ * extractSubdomain('www.gpthost.online', 'gpthost.online') // null
+ * extractSubdomain('gpthost.online', 'gpthost.online') // null
+ */
+export function extractSubdomain(hostname: string, baseDomain: string): string | null {
+  // Check if hostname ends with base domain
+  if (!hostname.endsWith(baseDomain)) {
+    return null;
+  }
+
+  // Remove base domain to get subdomain part
+  const subdomain = hostname.replace(`.${baseDomain}`, '');
+
+  // Filter out apex and www
+  if (subdomain === baseDomain || subdomain === 'www') {
+    return null;
+  }
+
+  return subdomain;
+}
+
+/**
+ * Check if subdomain is reserved and cannot be used by users
+ * Case-insensitive check
+ */
+export function isReservedSubdomain(subdomain: string): boolean {
+  return RESERVED_SUBDOMAINS.has(subdomain.toLowerCase());
+}
+
+/**
+ * Parse incoming request URL to extract routing information
+ * Enhanced with subdomain routing support
+ */
+export async function parseURL(request: Request, config: SiteRoutingConfig, env?: Env): Promise<ParsedURL> {
   const url = new URL(request.url);
   const pathname = url.pathname;
-  const hostname = url.hostname;
-  
-  // Check if this is an API request
-  const isApiRequest = pathname.startsWith('/api/');
-  
-  // Check for custom domain mapping
+  // Preserve original hostname when proxied through router worker
+  // Router rewrites Host to workers.dev, so read X-Original-Host first
+  const hostname =
+    request.headers.get('x-original-host') ||
+    request.headers.get('host') ||
+    url.hostname;
+
+  // Check if this is an API request or special GPThost path (skip project routing)
+  const isApiRequest = pathname.startsWith('/api/') || pathname.startsWith('/__gpthost');
+
+  // Initialize routing state
   let projectId: string | null = null;
   let filePath = '';
   let customDomain: string | undefined;
-  
-  if (config.customDomains?.has(hostname)) {
-    // Custom domain request
+  let subdomain: string | undefined;
+  let routingMode: 'path' | 'subdomain' | 'custom' = 'path'; // Default to path-based
+
+  // NEW: Subdomain routing check (priority 1 - before custom domains)
+  if (env && env.ENABLE_SUBDOMAIN_ROUTING === 'true' && !isApiRequest) {
+    const baseDomain = env.BASE_DOMAIN || 'gpthost.online';
+    // CRITICAL: Use ?? instead of || so empty string (production) is valid
+    const subdomainSuffix = env.SUBDOMAIN_SUFFIX ?? '';
+
+    // Build regex pattern: {subdomain}-staging.gpthost.online
+    const pattern = new RegExp(`^(.+)${subdomainSuffix.replace('-', '\\-')}\\.${baseDomain.replace('.', '\\.')}$`);
+    const match = hostname.match(pattern);
+
+    if (match) {
+      const fullSubdomain = match[0]; // e.g., "todo-app-staging.gpthost.online"
+      const subdomainWithSuffix = fullSubdomain.replace(`.${baseDomain}`, ''); // e.g., "todo-app-staging"
+
+      // Set subdomain for response
+      subdomain = subdomainWithSuffix;
+
+      // Look up project ID from KV
+      try {
+        const subdomainService = new SubdomainService(env);
+        const result = await subdomainService.getProjectIdFromSubdomain(subdomainWithSuffix);
+
+        if (result.ok) {
+          projectId = result.value;
+          filePath = pathname === '/' ? 'index.html' : pathname.substring(1);
+          customDomain = hostname; // Treat subdomain as custom domain for compatibility
+          routingMode = 'subdomain';
+        } else {
+          // Subdomain found but not mapped - still set routing mode
+          routingMode = 'subdomain';
+          filePath = pathname === '/' ? 'index.html' : pathname.substring(1);
+        }
+      } catch (error) {
+        console.error('Subdomain routing error:', error);
+        // Subdomain pattern matched but lookup failed - keep routing mode
+        routingMode = 'subdomain';
+        filePath = pathname === '/' ? 'index.html' : pathname.substring(1);
+      }
+    }
+  }
+
+  // Check for custom domain mapping (priority 2 - if not already matched by subdomain)
+  if (!projectId && routingMode === 'path' && config.customDomains?.has(hostname)) {
     customDomain = hostname;
     projectId = config.customDomains.get(hostname) || null;
     filePath = pathname === '/' ? 'index.html' : pathname.substring(1);
-  } else if (!isApiRequest && pathname.startsWith(`/${config.pathPrefix}/`)) {
-    // Standard deployment URL: /sites/{project-id}/{file-path}
+    routingMode = 'custom';
+  } else if (!projectId && routingMode === 'path' && !isApiRequest && pathname.startsWith(`/${config.pathPrefix}/`)) {
+    // Standard deployment URL: /sites/{project-id}/{file-path} (priority 3)
     const pathSegments = pathname.split('/');
     if (pathSegments.length >= 3) {
       projectId = pathSegments[2];
-      filePath = pathSegments.length > 3 
+      filePath = pathSegments.length > 3
         ? pathSegments.slice(3).join('/')
         : 'index.html';
+      routingMode = 'path';
     }
   }
-  
+
   // Clean up file path
   if (filePath === '' || filePath === '/') {
     filePath = 'index.html';
   }
-  
+
   // Remove leading slash if present
   if (filePath.startsWith('/')) {
     filePath = filePath.substring(1);
   }
-  
+
   return {
     projectId,
     filePath,
     isApiRequest,
     isRootRequest: filePath === 'index.html',
-    customDomain
+    customDomain,
+    subdomain,
+    routingMode
   };
 }
 
@@ -281,10 +389,10 @@ export function createDefaultSiteRoutingConfig(env: Env): SiteRoutingConfig {
 
 /**
  * Extract project ID from various URL formats
- * Supports both standard deployment URLs and custom domains
+ * Supports both standard deployment URLs, custom domains, and subdomain routing
  */
-export function extractProjectId(request: Request, config: SiteRoutingConfig): string | null {
-  const parsed = parseURL(request, config);
+export async function extractProjectId(request: Request, config: SiteRoutingConfig, env?: Env): Promise<string | null> {
+  const parsed = await parseURL(request, config, env);
   return parsed.projectId;
 }
 
@@ -366,6 +474,52 @@ export function createProjectNotFoundResponse(projectId: string): Response {
             <li>The project has been successfully deployed</li>
             <li>You have the correct deployment URL</li>
         </ul>
+    </div>
+</body>
+</html>`;
+
+  return new Response(html, {
+    status: 404,
+    headers: {
+      'Content-Type': 'text/html',
+      ...SECURITY_HEADERS
+    }
+  });
+}
+
+/**
+ * Generate subdomain not found response
+ * User-friendly error page when subdomain doesn't exist or isn't mapped
+ */
+export function createSubdomainNotFoundResponse(subdomain: string, baseDomain: string): Response {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subdomain Not Found</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 20px; }
+        p { color: #666; line-height: 1.5; margin-bottom: 15px; }
+        .code { background: #f8f9fa; padding: 4px 8px; border-radius: 4px; font-family: monospace; color: #e74c3c; }
+        ul { margin: 20px 0; padding-left: 20px; }
+        li { margin-bottom: 10px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Subdomain Not Found</h1>
+        <p>The subdomain <span class="code">${subdomain}.${baseDomain}</span> does not exist.</p>
+        <p>Possible reasons:</p>
+        <ul>
+            <li>The subdomain name is incorrect</li>
+            <li>The project hasn't been deployed yet</li>
+            <li>DNS propagation in progress (can take up to 60 minutes)</li>
+            <li>The subdomain mapping hasn't been created</li>
+        </ul>
+        <p>If you believe this is an error, please contact support.</p>
     </div>
 </body>
 </html>`;

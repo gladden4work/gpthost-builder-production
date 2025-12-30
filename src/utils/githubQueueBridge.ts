@@ -1,5 +1,5 @@
 /**
- * TASK-023: CF Queue to GitHub Webhook Bridge
+ * CF Queue to GitHub Webhook Bridge
  * 
  * ✅ REAL INTEGRATION - This module provides ACTUAL GitHub Actions build execution!
  * 

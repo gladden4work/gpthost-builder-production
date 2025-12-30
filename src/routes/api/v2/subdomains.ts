@@ -15,6 +15,8 @@
 import { v2Success, v2Error, getRequestId } from '../../../middleware/envelope';
 import { validateV2Auth } from '../../../middleware/auth';
 import { SubdomainService } from '../../../services/SubdomainService';
+import { ManifestService } from '../../../services/ManifestService';
+import { isManifestEnabled } from '../../../config/featureFlags';
 
 /**
  * Handle GET /api/v2/subdomains/check?subdomain=my-app
@@ -180,19 +182,39 @@ export async function handleV2SubdomainReserve(
     // 3. Reserve subdomain using SubdomainService
     const subdomainService = new SubdomainService(env);
 
-    // Strip environment suffix from user-provided subdomain to get raw project name
-    // registerSubdomain() will re-add the suffix via generateSubdomain()
-    // This prevents double-suffix bug (e.g., "test-project-staging-staging")
-    const subdomainSuffix = env.SUBDOMAIN_SUFFIX || '-staging';
-    const projectName = subdomain.endsWith(subdomainSuffix)
+    // Strip environment suffix from user-provided subdomain to get raw project name.
+    // registerSubdomain() will re-add the suffix via generateSubdomain().
+    //
+    // Important: Production uses SUBDOMAIN_SUFFIX="" (empty). In JS, every string endsWith("")
+    // and slice(0, -0) becomes slice(0, 0) => "", so we must only strip when suffix is non-empty.
+    const subdomainSuffix = env.SUBDOMAIN_SUFFIX ?? '';
+    const projectName = subdomainSuffix && subdomain.endsWith(subdomainSuffix)
       ? subdomain.slice(0, -subdomainSuffix.length)
       : subdomain;
+
+    const normalizedSubdomain = subdomainService.generateSubdomain(projectName);
+
+    const updateManifestSubdomain = async () => {
+      if (!isManifestEnabled(env)) return;
+      try {
+        const manifestService = new ManifestService(env);
+        const baseDomain = env.BASE_DOMAIN || 'gpthost.online';
+        const deploymentUrl = `https://${normalizedSubdomain}.${baseDomain}`;
+        await manifestService.updateSubdomain(userId, project_id, normalizedSubdomain, deploymentUrl);
+      } catch (manifestError) {
+        console.warn('[SUBDOMAINS] Failed to update manifest on register', {
+          projectId: project_id,
+          subdomain: normalizedSubdomain,
+          error: manifestError instanceof Error ? manifestError.message : 'Unknown'
+        });
+      }
+    };
 
     const result = await subdomainService.registerSubdomain(projectName, project_id, userId);
 
     if (result.ok) {
-      // KV value now includes userId and metadata (JSON object)
-      // 4. Return success response
+      await updateManifestSubdomain();
+
       const createdAt = new Date().toISOString();
       return v2Success({
         id: `${subdomain}-${Date.now()}`,  // Generate temp ID
@@ -202,17 +224,53 @@ export async function handleV2SubdomainReserve(
         created_at: createdAt,
         is_active: true
       }, requestId);
-    } else {
-      // Map error codes to HTTP status
-      const errorStatusMap: Record<string, number> = {
-        'SUBDOMAIN_ALREADY_EXISTS': 409,  // Conflict
-        'SUBDOMAIN_INVALID_NAME': 422,    // Unprocessable Entity
-        'SUBDOMAIN_KV_ERROR': 500,        // Internal Server Error
-      };
-
-      const status = errorStatusMap[result.error.code] || 500;
-      return v2Error(result.error.code, result.error.message, status, requestId);
     }
+
+    // Idempotency: If the subdomain already maps to this project, treat as success.
+    // This commonly happens when legacy routes (e.g. /api/paste) pre-register mappings.
+    if (result.error.code === 'SUBDOMAIN_ALREADY_EXISTS' && env.SUBDOMAIN_MAPPINGS) {
+      try {
+        const existing = await env.SUBDOMAIN_MAPPINGS.get(normalizedSubdomain);
+        if (existing) {
+          let existingProjectId: string | null = null;
+          try {
+            const parsed = JSON.parse(existing) as { projectId?: string };
+            existingProjectId = parsed?.projectId ?? null;
+          } catch {
+            existingProjectId = existing;
+          }
+
+          if (existingProjectId === project_id) {
+            await updateManifestSubdomain();
+            const createdAt = new Date().toISOString();
+            return v2Success({
+              id: `${subdomain}-${Date.now()}`,
+              subdomain,
+              project_id,
+              user_id: userId,
+              created_at: createdAt,
+              is_active: true
+            }, requestId);
+          }
+        }
+      } catch (idempotencyError) {
+        console.warn('[SUBDOMAINS] Idempotency check failed', {
+          subdomain: normalizedSubdomain,
+          projectId: project_id,
+          error: idempotencyError instanceof Error ? idempotencyError.message : 'Unknown'
+        });
+      }
+    }
+
+    // Map error codes to HTTP status
+    const errorStatusMap: Record<string, number> = {
+      'SUBDOMAIN_ALREADY_EXISTS': 409,  // Conflict
+      'SUBDOMAIN_INVALID_NAME': 422,    // Unprocessable Entity
+      'SUBDOMAIN_KV_ERROR': 500,        // Internal Server Error
+    };
+
+    const status = errorStatusMap[result.error.code] || 500;
+    return v2Error(result.error.code, result.error.message, status, requestId);
 
   } catch (error) {
     console.error('[SUBDOMAINS] Reserve error:', error);
@@ -353,10 +411,31 @@ export async function handleV2SubdomainDelete(
   try {
     const subdomainService = new SubdomainService(env);
 
+    // Get project ID before deletion for manifest update
+    let projectId: string | null = null;
+    const projectIdResult = await subdomainService.getProjectIdFromSubdomain(subdomain);
+    if (projectIdResult.ok) {
+      projectId = projectIdResult.value;
+    }
+
     // 2. Delete subdomain with ownership validation
     const result = await subdomainService.deleteSubdomain(subdomain, userId);
 
     if (result.ok) {
+      // Update manifest if feature enabled
+      if (isManifestEnabled(env) && projectId) {
+        try {
+          const manifestService = new ManifestService(env);
+          await manifestService.updateSubdomain(userId, projectId, null, null);
+        } catch (manifestError) {
+          console.warn('[SUBDOMAINS] Failed to update manifest on delete', {
+            projectId,
+            subdomain,
+            error: manifestError instanceof Error ? manifestError.message : 'Unknown'
+          });
+        }
+      }
+
       // 4. Return success response
       return v2Success({
         message: 'Subdomain released successfully',

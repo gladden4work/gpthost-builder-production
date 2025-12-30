@@ -1,5 +1,5 @@
 /**
- * TASK-025: Server-Sent Events (SSE) Manager
+ * Server-Sent Events (SSE) Manager
  *
  * This utility manages real-time Server-Sent Events connections for build status updates.
  * Provides a production-ready SSE implementation with connection management,

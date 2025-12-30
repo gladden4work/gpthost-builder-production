@@ -1,5 +1,5 @@
 /**
- * GitHub Actions Error Handler - TASK-026
+ * GitHub Actions Error Handler
  * 
  * Comprehensive GitHub Actions log parsing and error extraction system.
  * Fetches workflow run logs, extracts meaningful error messages, and classifies
@@ -352,7 +352,7 @@ export class GitHubErrorHandler {
 
   /**
    * Fetch workflow steps from GitHub API
-   * TASK-026: Real GitHub API integration implementation
+   * Real GitHub API integration implementation
    */
   private async fetchWorkflowSteps(
     repositoryFullName: string,
@@ -396,7 +396,7 @@ export class GitHubErrorHandler {
 
   /**
    * Fetch raw workflow logs (enhanced version of githubApi method)
-   * TASK-026: Now uses real GitHub Actions logs from ZIP extraction
+   * Now uses real GitHub Actions logs from ZIP extraction
    */
   private async fetchWorkflowRunLogs(
     repositoryFullName: string,

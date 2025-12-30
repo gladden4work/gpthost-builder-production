@@ -23,6 +23,17 @@ export interface FileMetadata {
 }
 
 /**
+ * Build metadata stored alongside a project
+ */
+export interface BuildMetadata {
+  buildId: string;
+  githubRunId?: number;
+  startedAt?: Date;
+  completedAt?: Date;
+  artifactPath?: string;
+}
+
+/**
  * Project entity
  */
 export interface Project {
@@ -35,6 +46,12 @@ export interface Project {
   ownerId?: string;
   createdAt: Date;
   updatedAt: Date;
+  deploymentUrl?: string;
+  buildId?: string;
+  githubRepo?: string;
+  githubWorkflowRunId?: string;
+  errorMessage?: string;
+  buildMetadata?: BuildMetadata;
 }
 
 /**
@@ -45,6 +62,25 @@ export interface CreateProjectInput {
   description?: string;
   framework?: FrameworkType;
   files: ProjectFile[];
+  ownerId?: string;
+  /** Optional prefix for file paths (e.g., 'source/' for paste operations) */
+  sourcePrefix?: string;
+}
+
+/**
+ * Update project input
+ */
+export interface UpdateProjectInput {
+  name?: string;
+  description?: string;
+  status?: ProjectStatus;
+  deploymentUrl?: string;
+  buildId?: string;
+  githubRepo?: string;
+  githubWorkflowRunId?: string;
+  errorMessage?: string;
+  files?: FileMetadata[];
+  buildMetadata?: BuildMetadata;
   ownerId?: string;
 }
 
@@ -59,6 +95,7 @@ export interface ProjectFilter {
   offset?: number;
   limit?: number;
   ownerId?: string;
+  ownerAliases?: string[];
 }
 
 /**

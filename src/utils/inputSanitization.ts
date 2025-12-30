@@ -1,5 +1,5 @@
 /**
- * TASK-034: Input Sanitization and Validation Utilities
+ * Input Sanitization and Validation Utilities
  * 
  * Comprehensive security utilities for sanitizing and validating user inputs
  * to prevent XSS, injection attacks, and ensure data integrity.

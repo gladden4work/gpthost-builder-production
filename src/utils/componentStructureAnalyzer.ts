@@ -1,7 +1,7 @@
 /**
- * TASK-010: Component Structure Analyzer
+ * Component Structure Analyzer
  * Comprehensive analysis of component structure, props, hooks, exports and complexity
- * Building upon TASK-009 import parser and existing file analysis infrastructure
+ * Building upon import parser and existing file analysis infrastructure
  */
 
 import {

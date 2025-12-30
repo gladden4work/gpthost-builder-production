@@ -1,3 +1,9 @@
+/**
+ * TSX Normalizer Utility
+ * 
+ * Fixes common JSX syntax errors from AI-generated code.
+ * Handles object prop syntax, arrow functions, and TypeScript compatibility issues.
+ */
 import * as ts from 'typescript';
 
 export interface NormalizeResult {
@@ -13,13 +19,28 @@ export function normalizeTsx(source: string, fileName = 'input.tsx'): NormalizeR
 
   // Pre-process to fix patterns that TypeScript can't parse
   // Fix JSX attributes with single brace object literals: prop={ key: value } -> prop={{ key: value }}
+  // Guard: Only rewrite when we're inside an opening tag to avoid touching plain JS objects
   let preprocessed = source.replace(
     /(\w+)\s*=\s*\{\s*([a-zA-Z_$][a-zA-Z0-9_$]*\s*:\s*[^}]+(?:,\s*[a-zA-Z_$][a-zA-Z0-9_$]*\s*:\s*[^}]+)*)\s*\}/g,
-    (match, attrName, objectContent) => {
-      // Check if it's already double-braced or contains JSX expressions
+    (match, attrName, objectContent, offset) => {
+      // Quick exits
       if (match.includes('{{') || match.includes('}}') || match.includes('<') || match.includes('>')) {
         return match;
       }
+
+      // Only consider replacements that appear inside an opening JSX tag
+      const before = source.slice(0, offset);
+      const lastLt = before.lastIndexOf('<');
+      const lastGt = before.lastIndexOf('>');
+      if (lastLt === -1 || lastLt < lastGt) {
+        // We're not inside a tag
+        return match;
+      }
+      // Ensure this isn't a closing tag
+      if (source.slice(lastLt, offset).startsWith('</')) {
+        return match;
+      }
+
       fixes.push('object-prop-single-to-double-brace');
       return `${attrName}={{ ${objectContent} }}`;
     }

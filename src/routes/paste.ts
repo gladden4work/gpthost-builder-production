@@ -5,9 +5,9 @@
 
 import { successResponse, errorResponse } from '../utils/responses';
 import { ProjectMetadata, FileMetadata, PasteRequest, PasteResponse, ProjectStatus } from '../types/api';
-import { 
-  convertContentToFile, 
-  validatePastedContent, 
+import {
+  convertContentToFile,
+  validatePastedContent,
   createFileFromContent,
   generateDetectionFeedback
 } from '../utils/contentConversion';
@@ -16,6 +16,14 @@ import { generateScaffoldingHandler } from './scaffolding';
 import { createDeploymentManager } from '../utils/deploymentManager';
 import { preprocessJSX, shouldPreprocessFile } from '../utils/jsxPreprocessor';
 import type { AuthenticatedRequest } from '../utils/authUtils';
+import { SubdomainService } from '../services/SubdomainService';
+import { createSharedLogger } from '../utils/sharedLogger';
+import { ProjectService } from '../services/ProjectService';
+import { StorageService } from '../services/StorageService';
+import { sanitizeProjectName } from '../utils/projectName';
+import { ProjectErrorCode } from '../lib/errors';
+import { ManifestService } from '../services/ManifestService';
+import { isManifestEnabled } from '../config/featureFlags';
 
 // Owner scoping
 const LEGACY_OWNER_ID = 'legacy-single-tenant' as const;
@@ -28,6 +36,11 @@ const translateStatus = (status: ProjectStatus): ProjectStatus =>
  * POST /api/paste
  */
 export async function pasteHandler(request: Request, env: Env): Promise<Response> {
+  // Track variables for error logging (need to be accessible in catch block)
+  let contentForLogging: string | undefined;
+  let frameworkForLogging: string | undefined;
+  let userIdForLogging: string | undefined;
+
   try {
     // Verify request method
     if (request.method !== 'POST') {
@@ -64,16 +77,19 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
 
     // Extract and validate inputs
     const { content, project_name, description } = requestData;
+    contentForLogging = content; // Store for potential error logging
     
-    // Validate project name
-    const sanitizedProjectName = project_name?.toString()?.trim()?.slice(0, 100);
-    if (!sanitizedProjectName || sanitizedProjectName.length === 0) {
+    // Validate and sanitize project name
+    const projectNameResult = sanitizeProjectName(project_name);
+    if (projectNameResult.error) {
       return errorResponse(
         'INVALID_PROJECT_NAME',
-        'Project name is required and must be non-empty',
-        400
+        projectNameResult.error,
+        400,
+        { received: project_name, sanitized: projectNameResult.sanitized }
       );
     }
+    const sanitizedProjectName = projectNameResult.sanitized;
 
     // Validate pasted content
     const contentValidation = validatePastedContent(content);
@@ -90,10 +106,18 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
     const projectId = crypto.randomUUID();
     const timestamp = new Date().toISOString();
 
+    // Extract owner information early for ProjectService
+    const authContext = (request as AuthenticatedRequest).authContext;
+    userIdForLogging = authContext?.user?.id;
+    const ownerId = authContext?.authType === 'legacy-token'
+      ? LEGACY_OWNER_ID
+      : (authContext?.user?.id || LEGACY_OWNER_ID);
+
     console.info(`Processing paste request for project: ${sanitizedProjectName} (ID: ${projectId})`);
 
     // Step 1: Detect framework from content
     const detectedFramework = analyzeFrameworkFromContent(content);
+    frameworkForLogging = detectedFramework; // Store for potential error logging
     console.info(`Detected framework: ${detectedFramework}`);
 
     // Step 2: Convert content to appropriate file format
@@ -126,42 +150,48 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
       fileAnalysis = undefined;
     }
 
-    // Step 5: Store file in R2 (align with multi-project structure under projects/active)
-    const storagePath = `projects/active/${projectId}/source/${filename}`;
-    try {
-      await env.PROJECTS_BUCKET.put(storagePath, fileForAnalysis.stream(), {
-        httpMetadata: {
-          contentType: mimeType,
-        },
-        customMetadata: {
-          originalName: filename,
-          uploadTime: timestamp,
-          projectId: projectId,
-          source: 'paste', // Distinguish from file uploads
-          contentLength: content.length.toString()
-        }
-      });
+    // Step 5-8: Create project via ProjectService (handles file storage + manifest updates)
+    // This consolidates 6 direct R2 writes into a single service call
+    const storageService = new StorageService(env.PROJECTS_BUCKET);
+    const projectService = new ProjectService(storageService, env);
 
-      console.info(`File stored successfully at: ${storagePath}`);
-    } catch (r2Error) {
-      console.error(`Failed to store pasted content in R2:`, r2Error);
+    const createResult = await projectService.createProject({
+      name: sanitizedProjectName,
+      description: description?.toString()?.trim()?.slice(0, 500),
+      framework: detectedFramework,
+      ownerId,
+      sourcePrefix: 'source/',
+      files: [{
+        path: filename,
+        content: processedContent,
+      }]
+    });
+
+    if (!createResult.ok) {
+      console.error(`Failed to create project via ProjectService:`, createResult.error);
+      const statusCode = createResult.error.code === ProjectErrorCode.INVALID_INPUT ? 400 : 500;
       return errorResponse(
-        'STORAGE_ERROR',
-        `Failed to store pasted content`,
-        500,
-        { 
-          filename, 
-          projectId,
-          error: r2Error instanceof Error ? r2Error.message : String(r2Error) 
-        }
+        createResult.error.code || 'PROJECT_CREATE_FAILED',
+        createResult.error.message,
+        statusCode,
+        { projectId, error: createResult.error }
       );
     }
 
-    // Step 6: Create file metadata
+    // ProjectService generated a new ID, but we want to use our pre-generated one for consistency
+    // So we need to use the returned project's file path
+    const createdProject = createResult.value;
+    const storagePath = createdProject.files[0]?.path || `projects/${createdProject.id}/source/${filename}`;
+    console.info(`File stored successfully at: ${storagePath}`);
+
+    // NOTE: Legacy path (projects/active/) writes removed to prevent duplicate data
+    // See: Duplicate detection logging task - Nov 2025
+
+    // Step 6: Create file metadata with analysis (ProjectService doesn't store analysis)
     const fileMetadata: FileMetadata = {
       name: filename,
       path: storagePath,
-      size: content.length, // Use original content length
+      size: content.length,
       type: mimeType,
       upload_time: timestamp,
       analysis: fileAnalysis
@@ -170,7 +200,7 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
     // Step 7: Generate project analysis
     const fileAnalyses = fileAnalysis ? [fileAnalysis] : [];
     const projectAnalysis = aggregateProjectAnalysis(fileAnalyses);
-    
+
     // Step 7.5: Add security warnings for suspicious patterns
     const suspiciousPatterns = [
       { pattern: /require\s*\(\s*['"`]fs['"`]/, warning: 'File system access detected' },
@@ -179,33 +209,28 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
       { pattern: /eval\s*\(/, warning: 'Dynamic code execution detected' },
       { pattern: /document\.write/, warning: 'Potential DOM manipulation detected' }
     ];
-    
+
     const warnings: string[] = [];
     for (const { pattern, warning } of suspiciousPatterns) {
       if (pattern.test(content)) {
         warnings.push(warning);
       }
     }
-    
+
     if (warnings.length > 0) {
       projectAnalysis.warnings = warnings;
     }
-    
+
     console.info('Project analysis complete:', {
       primaryFramework: projectAnalysis.primaryFramework,
       componentType: projectAnalysis.componentType,
       totalComponents: projectAnalysis.totalComponents
     });
 
-    // Step 8: Create and store project metadata
-    // Attach owner information so the project is visible under the user's dashboard scope
-    const authContext = (request as AuthenticatedRequest).authContext;
-    const ownerId = authContext?.authType === 'legacy-token'
-      ? LEGACY_OWNER_ID
-      : (authContext?.user?.id || undefined);
-
+    // Step 8: Create full project metadata with analysis for scaffolding compatibility
+    // ProjectService creates basic metadata; we enhance it with analysis for scaffolding
     const projectMetadata: ProjectMetadata = {
-      id: projectId,
+      id: createdProject.id,
       status: 'analyzing',
       name: sanitizedProjectName,
       description: description?.toString()?.trim()?.slice(0, 500),
@@ -217,60 +242,96 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
     };
 
     // Persist ownerId alongside metadata (backward compatible: extra field)
-    // Note: ProjectService.listProjects reads this field to filter by owner
-    (projectMetadata as any).ownerId = ownerId || LEGACY_OWNER_ID;
+    (projectMetadata as any).ownerId = ownerId;
 
-    // Store metadata in active path for listing, and legacy path for backward compatibility
-    const metadataActivePath = `projects/active/${projectId}/metadata.json`;
-    const metadataLegacyPath = `projects/${projectId}/metadata.json`;
+    // Overwrite metadata with full version including analysis (scaffolding needs this)
+    // NOTE: Legacy path (projects/active/) writes removed to prevent duplicate data - Nov 2025
+    const metadataPath = `projects/${createdProject.id}/metadata.json`;
     try {
-      // Primary: active path
-      await env.PROJECTS_BUCKET.put(metadataActivePath, JSON.stringify(projectMetadata, null, 2), {
-        httpMetadata: {
-          contentType: 'application/json',
-        },
+      // Write to canonical path only (legacy path writes removed)
+      await env.PROJECTS_BUCKET.put(metadataPath, JSON.stringify(projectMetadata, null, 2), {
+        httpMetadata: { contentType: 'application/json' },
         customMetadata: {
-          projectId: projectId,
+          projectId: createdProject.id,
           type: 'metadata',
           created: timestamp,
           source: 'paste'
         }
       });
-      // Legacy: flat path to avoid breaking existing readers
-      await env.PROJECTS_BUCKET.put(metadataLegacyPath, JSON.stringify(projectMetadata, null, 2), {
-        httpMetadata: {
-          contentType: 'application/json',
-        },
-        customMetadata: {
-          projectId: projectId,
-          type: 'metadata',
-          created: timestamp,
-          source: 'paste'
-        }
-      });
+      console.info(`Project metadata stored at: ${metadataPath}`);
 
-      console.info(`Project metadata stored at: ${metadataActivePath} and ${metadataLegacyPath}`);
-    } catch (metadataError) {
-      console.error(`Failed to store project metadata for ${projectId}:`, metadataError);
-      
-      // Cleanup uploaded file on metadata failure
-      try {
-        console.info(`Cleaning up uploaded file due to metadata failure`);
-        await env.PROJECTS_BUCKET.delete(storagePath);
-        console.info('Successfully cleaned up uploaded file');
-      } catch (cleanupError) {
-        console.error('Failed to cleanup uploaded file:', cleanupError);
-      }
-      
-      return errorResponse(
-        'METADATA_STORAGE_ERROR',
-        'Failed to store project metadata. Uploaded content has been cleaned up.',
-        500,
-        { 
-          projectId, 
-          error: metadataError instanceof Error ? metadataError.message : String(metadataError) 
+      // Register subdomain mapping if subdomain routing is enabled
+      if (env.ENABLE_SUBDOMAIN_ROUTING === 'true') {
+        try {
+          const subdomainService = new SubdomainService(env);
+          const normalizedSubdomain = subdomainService.generateSubdomain(sanitizedProjectName);
+          const subdomainResult = await subdomainService.registerSubdomain(
+            sanitizedProjectName,
+            createdProject.id,
+            ownerId
+          );
+
+          if (subdomainResult.ok) {
+            console.info(`✅ Subdomain registered: ${normalizedSubdomain} → ${createdProject.id}`);
+
+            // Keep manifest in sync (dashboard reads from manifest fast-path)
+            if (isManifestEnabled(env)) {
+              try {
+                const manifestService = new ManifestService(env);
+                const baseDomain = env.BASE_DOMAIN || 'gpthost.online';
+                await manifestService.updateSubdomain(
+                  ownerId,
+                  createdProject.id,
+                  normalizedSubdomain,
+                  `https://${normalizedSubdomain}.${baseDomain}`
+                );
+              } catch (manifestError) {
+                console.warn(`Failed to update manifest subdomain for ${createdProject.id}:`, manifestError);
+              }
+            }
+          } else {
+            console.error(`⚠️ Failed to register subdomain for ${createdProject.id}:`, subdomainResult.error);
+
+            // If the mapping already exists (idempotent), still sync it into the manifest.
+            if (
+              subdomainResult.error?.code === 'SUBDOMAIN_ALREADY_EXISTS' &&
+              env.SUBDOMAIN_MAPPINGS &&
+              isManifestEnabled(env)
+            ) {
+              try {
+                const existing = await env.SUBDOMAIN_MAPPINGS.get(normalizedSubdomain);
+                if (existing) {
+                  let existingProjectId: string | null = null;
+                  try {
+                    const parsed = JSON.parse(existing) as { projectId?: string };
+                    existingProjectId = parsed?.projectId ?? null;
+                  } catch {
+                    existingProjectId = existing;
+                  }
+
+                  if (existingProjectId === createdProject.id) {
+                    const manifestService = new ManifestService(env);
+                    const baseDomain = env.BASE_DOMAIN || 'gpthost.online';
+                    await manifestService.updateSubdomain(
+                      ownerId,
+                      createdProject.id,
+                      normalizedSubdomain,
+                      `https://${normalizedSubdomain}.${baseDomain}`
+                    );
+                  }
+                }
+              } catch (manifestError) {
+                console.warn(`Failed to heal manifest subdomain for ${createdProject.id}:`, manifestError);
+              }
+            }
+          }
+        } catch (subdomainError) {
+          console.error(`⚠️ Error registering subdomain for ${createdProject.id}:`, subdomainError);
         }
-      );
+      }
+    } catch (metadataError) {
+      console.error(`Failed to store enhanced project metadata for ${createdProject.id}:`, metadataError);
+      // Don't fail - basic project already created via ProjectService
     }
 
     // Step 9: Generate user-friendly feedback message
@@ -284,46 +345,65 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
     // Production-safe: use top-level import and always attempt scaffolding
     let pasteStatus: ProjectStatus = 'analyzing';
     let buildJobId: string | undefined;
+    let staticDeploymentUrl: string | undefined;
     const isFullHtml = (projectAnalysis.primaryFramework === 'html') ||
       ((fileAnalysis?.componentType === 'full-application') && filename.toLowerCase().endsWith('.html'));
     try {
       if (isFullHtml) {
         // Direct static deployment path
-        console.info(`Detected full HTML input for ${projectId}. Bypassing scaffolding and deploying statically.`);
+        console.info(`Detected full HTML input for ${createdProject.id}. Bypassing scaffolding and deploying statically.`);
         const deploymentManager = createDeploymentManager(env);
-        const result = await deploymentManager.deployStaticSite(projectId);
+        const result = await deploymentManager.deployStaticSite(createdProject.id);
         if (!result.success) {
           return errorResponse(
             result.error?.code || 'STATIC_DEPLOY_FAILED',
             result.error?.message || 'Static deployment failed',
             500,
-            { project_id: projectId, error: result.error }
+            { project_id: createdProject.id, error: result.error }
           );
         }
         pasteStatus = 'deployed';
-      } else {
-        // Update project metadata to indicate scaffolding is being triggered FIRST for concurrency safety
-        projectMetadata.status = 'scaffolding';
+        staticDeploymentUrl = result.url;
+
+        // Persist status and deployment_url to R2 (mirrors scaffolding path behavior)
+        projectMetadata.status = 'deployed';
+        projectMetadata.deployment_url = staticDeploymentUrl;
         projectMetadata.updated_at = new Date().toISOString();
 
-        // Persist status update in both active and legacy paths
-        await env.PROJECTS_BUCKET.put(metadataActivePath, JSON.stringify(projectMetadata, null, 2), {
-          httpMetadata: {
-            contentType: 'application/json',
-          },
+        // Write to canonical path only (legacy path writes removed - Nov 2025)
+        await env.PROJECTS_BUCKET.put(metadataPath, JSON.stringify(projectMetadata, null, 2), {
+          httpMetadata: { contentType: 'application/json' },
           customMetadata: {
-            projectId: projectId,
+            projectId: createdProject.id,
             type: 'metadata',
             created: timestamp,
             source: 'paste'
           }
         });
-        await env.PROJECTS_BUCKET.put(metadataLegacyPath, JSON.stringify(projectMetadata, null, 2), {
-          httpMetadata: {
-            contentType: 'application/json',
-          },
+
+        // Update manifest via ProjectService for consistency
+        try {
+          await projectService.updateProject(createdProject.id, {
+            status: 'deployed' as ProjectStatus,
+            deploymentUrl: staticDeploymentUrl
+          });
+          console.info(`✅ Static HTML project ${createdProject.id} status updated to 'deployed' with URL in manifest`);
+        } catch (manifestError) {
+          // Non-critical: log but don't fail the request
+          console.warn(`Failed to update manifest for static HTML project ${createdProject.id}:`, manifestError);
+        }
+
+        console.info(`✅ Static HTML deployed successfully for project ${createdProject.id}`);
+      } else {
+        // Update project metadata to indicate scaffolding is being triggered FIRST for concurrency safety
+        projectMetadata.status = 'scaffolding';
+        projectMetadata.updated_at = new Date().toISOString();
+
+        // Persist status update to single canonical path
+        await env.PROJECTS_BUCKET.put(metadataPath, JSON.stringify(projectMetadata, null, 2), {
+          httpMetadata: { contentType: 'application/json' },
           customMetadata: {
-            projectId: projectId,
+            projectId: createdProject.id,
             type: 'metadata',
             created: timestamp,
             source: 'paste'
@@ -331,7 +411,7 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
         });
 
         // Create scaffolding request (URL is only used for path parsing)
-        const scaffoldingRequest = new Request(`https://internal/api/scaffolding/${projectId}/generate`, {
+        const scaffoldingRequest = new Request(`https://internal/api/scaffolding/${createdProject.id}/generate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -348,7 +428,7 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
           } catch (parseError) {
             console.warn('Failed to parse scaffolding response:', parseError);
           }
-          console.info(`✅ Auto-scaffolding completed successfully for project ${projectId}`);
+          console.info(`✅ Auto-scaffolding completed successfully for project ${createdProject.id}`);
         } else {
           pasteStatus = 'scaffolding';
           let errorDetails: any = { status: scaffoldingResponse.status };
@@ -356,7 +436,7 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
             const errBody = await scaffoldingResponse.json();
             errorDetails = { ...errorDetails, ...errBody };
           } catch {}
-          console.error(`❌ Auto-scaffolding failed for project ${projectId}:`, errorDetails);
+          console.error(`❌ Auto-scaffolding failed for project ${createdProject.id}:`, errorDetails);
 
           // Return accurate error to caller (avoid misleading 201)
           return errorResponse(
@@ -364,7 +444,7 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
             'Auto-scaffolding failed after paste operation',
             500,
             {
-              project_id: projectId,
+              project_id: createdProject.id,
               detected_framework: detectedFramework,
               ...errorDetails
             }
@@ -373,7 +453,7 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
       }
     } catch (scaffoldingError) {
       pasteStatus = 'scaffolding';
-      console.error(`Error triggering auto-scaffolding for project ${projectId}:`, scaffoldingError);
+      console.error(`Error triggering auto-scaffolding for project ${createdProject.id}:`, scaffoldingError);
 
       // Return accurate error to caller (avoid misleading 201)
       return errorResponse(
@@ -381,7 +461,7 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
         'Failed to trigger auto-scaffolding',
         500,
         {
-          project_id: projectId,
+          project_id: createdProject.id,
           detected_framework: detectedFramework,
           error: scaffoldingError instanceof Error ? scaffoldingError.message : String(scaffoldingError)
         }
@@ -390,25 +470,60 @@ export async function pasteHandler(request: Request, env: Env): Promise<Response
 
     // Step 11: Prepare successful response
     const pasteResponse: PasteResponse = {
-      project_id: projectId,
+      project_id: createdProject.id,
       status: translateStatus(pasteStatus),
       message: feedbackMessage,
       detected_framework: detectedFramework,
       generated_filename: filename,
       analysis: projectAnalysis,
-      build_job_id: buildJobId
+      build_job_id: buildJobId,
+      deployment_url: staticDeploymentUrl
     };
 
-    console.info(`Paste operation completed successfully for project ${projectId}`);
+    console.info(`Paste operation completed successfully for project ${createdProject.id}`);
     return successResponse(pasteResponse, 201);
 
   } catch (error) {
     console.error('Unexpected error in paste handler:', error);
+
+    // Log error to admin dashboard for observability
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    try {
+      const logger = createSharedLogger(env);
+
+      // Determine if this is a parse/unsupported code error
+      const isParseError = errorMessage.includes('parse failed') ||
+                           errorMessage.includes('Parse error') ||
+                           errorMessage.includes('Expression expected');
+
+      if (isParseError && contentForLogging) {
+        // Log as unsupported code pattern for /admin/patterns dashboard
+        await logger.logUnsupportedCode(
+          frameworkForLogging || 'unknown',
+          errorMessage,
+          contentForLogging,
+          undefined, // projectId not created yet
+          userIdForLogging
+        );
+      } else {
+        // Log as general paste error for /admin/logs dashboard
+        await logger.logCodePasteError(
+          errorMessage,
+          contentForLogging || '',
+          userIdForLogging,
+          { framework: frameworkForLogging }
+        );
+      }
+    } catch (loggingError) {
+      // Don't let logging failure break the error response
+      console.error('Failed to log paste error:', loggingError);
+    }
+
     return errorResponse(
       'PASTE_ERROR',
       'An unexpected error occurred during code paste processing',
       500,
-      error instanceof Error ? error.message : String(error)
+      errorMessage
     );
   }
 }

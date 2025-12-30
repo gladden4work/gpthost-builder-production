@@ -14,6 +14,7 @@ import { Result, Ok, Err } from '../lib/result';
 import { DeploymentError, DeploymentErrorCode } from '../lib/errors';
 import { IStorageService, IProjectService, IBuildService, ProjectStatus, IDeployService } from './interfaces';
 import { getDeploymentUrl as getWorkerDeploymentUrl } from '../utils/workerUrl';
+import { maybeInjectResourceProxy, isResourceProxyEnabled } from '../utils/resourceProxy';
 
 // Constants (moved hardcoded values here for clarity and reuse)
 const BUILD_STATUS_SUCCESS = 'success' as const;
@@ -389,6 +390,17 @@ export class DeployService implements IDeployService {
             projectId,
             path: effectivePath,
           }));
+        }
+
+      }
+
+      if (contentType === 'text/html' && this.env && isResourceProxyEnabled(this.env)) {
+        const decoder = new TextDecoder();
+        const encoder = new TextEncoder();
+        const injected = await maybeInjectResourceProxy(decoder.decode(bodyBuffer), projectId, this.env);
+        if (injected) {
+          bodyBuffer = encoder.encode(injected).buffer;
+          headers['X-GPThost-Resource-Proxy'] = 'injected';
         }
       }
 

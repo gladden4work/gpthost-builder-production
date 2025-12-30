@@ -1,5 +1,5 @@
 /**
- * Site Routing - TASK-019
+ * Site Routing
  * 
  * Middleware for serving deployed websites from R2 storage.
  * Handles static file serving, SPA routing, custom domains, and proper fallbacks.
@@ -22,10 +22,12 @@ import {
   createDefaultSiteRoutingConfig,
   create404Response,
   createProjectNotFoundResponse,
+  createSubdomainNotFoundResponse,
   SECURITY_HEADERS,
   type SiteRoutingConfig,
   type ParsedURL
 } from '../utils/urlRouter';
+import { maybeInjectResourceProxy, isResourceProxyEnabled } from '../utils/resourceProxy';
 
 /**
  * Site routing options for handling different scenarios
@@ -53,9 +55,9 @@ export async function handleSiteRouting(
   const enableSpaFallback = options.enableSpaFallback ?? true;
 
   try {
-    // Parse the incoming URL
-    const parsed = parseURL(request, config);
-    
+    // Parse the incoming URL (async with subdomain routing support)
+    const parsed = await parseURL(request, config, env);
+
     if (debug) {
       console.info('[SITE-ROUTING] Parsed URL:', parsed);
     }
@@ -63,6 +65,15 @@ export async function handleSiteRouting(
     // Skip API requests - let main router handle them
     if (parsed.isApiRequest) {
       return null; // Let main router handle API requests
+    }
+
+    // Handle subdomain routing mode with no project found
+    if (parsed.routingMode === 'subdomain' && !parsed.projectId && parsed.subdomain) {
+      if (debug) {
+        console.info('[SITE-ROUTING] Subdomain not mapped:', parsed.subdomain);
+      }
+      const baseDomain = env.BASE_DOMAIN || 'gpthost.online';
+      return createSubdomainNotFoundResponse(parsed.subdomain, baseDomain);
     }
 
     // Must have a valid project ID to serve content
@@ -160,6 +171,24 @@ async function serveFile(
     // Determine content type and cache headers
     const mimeType = getMimeType(parsed.filePath);
     const cacheControl = getCacheControl(mimeType, parsed.filePath);
+
+    if (mimeType === 'text/html' && isResourceProxyEnabled(env)) {
+      const html = await object.text();
+      const injected = await maybeInjectResourceProxy(html, parsed.projectId!, env);
+      if (injected) {
+        return new Response(injected, {
+          status: 200,
+          headers: {
+            'Content-Type': mimeType,
+            'Cache-Control': cacheControl,
+            'ETag': object.etag || '',
+            'Last-Modified': object.uploaded?.toUTCString() || '',
+            'X-GPThost-Resource-Proxy': 'injected-at-request-time',
+            ...SECURITY_HEADERS
+          }
+        });
+      }
+    }
     
     // Stream the file content
     const body = object.body;

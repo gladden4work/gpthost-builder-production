@@ -397,6 +397,7 @@ export interface PasteResponse {
   generated_filename: string;
   analysis?: ProjectAnalysis;
   build_job_id?: string;
+  deployment_url?: string;
 }
 
 /**
@@ -428,7 +429,7 @@ export interface HealthResponse {
 }
 
 /**
- * TASK-011: Dependency Resolution System Types
+ * Dependency Resolution System Types
  */
 
 /**
@@ -624,7 +625,7 @@ export interface DependencyResolutionResponse {
 }
 
 /**
- * TASK-012: Scaffolding Template Generator Types
+ * Scaffolding Template Generator Types
  */
 
 /**
@@ -753,7 +754,7 @@ export interface ScaffoldingResponse {
 }
 
 /**
- * TASK-013: Component Wrapper Generator Types
+ * Component Wrapper Generator Types
  */
 
 /**
@@ -860,7 +861,7 @@ export interface ComponentWrapperResponse {
 }
 
 /**
- * TASK-015: Build Queue System Types
+ * Build Queue System Types
  */
 
 /**
@@ -1018,7 +1019,7 @@ export interface BuildCancelResponse {
 }
 
 /**
- * TASK-017: Build Error Handling System Types
+ * Build Error Handling System Types
  */
 
 /**
@@ -1159,7 +1160,7 @@ export interface ErrorAnalyticsResponse {
 }
 
 /**
- * TASK-018: Deployment Pipeline System Types
+ * Deployment Pipeline System Types
  */
 
 /**
@@ -1263,7 +1264,7 @@ export interface RemoveDeploymentResponse {
 }
 
 /**
- * TASK-031: Project Metadata Storage System Types
+ * Project Metadata Storage System Types
  */
 
 /**
@@ -1599,7 +1600,7 @@ export interface BatchMetadataResponse {
 }
 
 /**
- * TASK-035: Project Deletion Types and Interfaces
+ * Project Deletion Types and Interfaces
  */
 
 /**

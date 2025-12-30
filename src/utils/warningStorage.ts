@@ -1,5 +1,5 @@
 /**
- * Warning Storage System - TASK-020
+ * Warning Storage System
  * 
  * Storage and retrieval system for build warnings integrated with R2.
  * Provides efficient warning data management, analytics, and historical tracking.

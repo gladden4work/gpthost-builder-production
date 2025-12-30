@@ -285,7 +285,7 @@ export async function reanalyzeProjectHandler(request: Request, env: Env): Promi
 }
 
 /**
- * TASK-009: Get detailed dependency analysis for a project
+ * Get detailed dependency analysis for a project
  * GET /api/analysis/{project_id}/dependencies
  * 
  * Provides comprehensive import and dependency information useful for:
@@ -515,7 +515,7 @@ export async function getProjectDependenciesHandler(request: Request, env: Env):
 }
 
 /**
- * TASK-010: Get detailed component structure analysis for a project
+ * Get detailed component structure analysis for a project
  * GET /api/analysis/{project_id}/components
  * 
  * Provides comprehensive component analysis useful for:

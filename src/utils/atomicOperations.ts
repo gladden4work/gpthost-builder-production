@@ -1,5 +1,5 @@
 /**
- * TASK-034: Atomic Operations Utility
+ * Atomic Operations Utility
  * 
  * Provides atomic compare-and-swap operations for preventing race conditions
  * in concurrent update scenarios, specifically for optimistic locking.

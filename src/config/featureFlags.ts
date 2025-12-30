@@ -13,6 +13,15 @@ export interface FeatureFlags {
   useNewGitHubService?: boolean;
   useNewBuildService?: boolean;
   useNewDeployService?: boolean;
+  useResourceProxy?: boolean;
+}
+
+/**
+ * Check if manifest-based project list is enabled
+ * Used for fast dashboard loading via KV instead of R2 enumeration
+ */
+export function isManifestEnabled(env: Env): boolean {
+  return env.ENABLE_PROJECT_MANIFEST === 'true';
 }
 
 export function getFeatureFlags(env: Env): FeatureFlags {
@@ -27,6 +36,7 @@ export function getFeatureFlags(env: Env): FeatureFlags {
         useNewGitHubService: !!parsed.useNewGitHubService,
         useNewBuildService: !!parsed.useNewBuildService,
         useNewDeployService: !!parsed.useNewDeployService,
+        useResourceProxy: !!parsed.useResourceProxy,
       };
     } catch (error) {
       // Malformed JSON → fall through to env fallback with safe defaults
@@ -45,6 +55,6 @@ export function getFeatureFlags(env: Env): FeatureFlags {
     useNewGitHubService: (env as any).FEATURE_NEW_GITHUB === 'true',
     useNewBuildService: (env as any).FEATURE_NEW_BUILD === 'true',
     useNewDeployService: (env as any).FEATURE_NEW_DEPLOY === 'true',
+    useResourceProxy: (env as any).FEATURE_RESOURCE_PROXY === 'true' || (env as any).ENABLE_RESOURCE_PROXY === 'true',
   };
 }
-

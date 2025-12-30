@@ -14,11 +14,93 @@
 import { router } from './routes/router';
 import { processBuildJob, BuildJobResult } from './utils/buildQueueConsumer';
 import { BuildJob } from './types/api';
+import { validateAndLog } from './middleware/envValidation';
+import { handleManifestDriftCheck } from './scheduled/manifestDriftCheck';
+import { createResourceProxyToken } from './routes/resourceProxy';
+
+// Export Durable Object classes for Cloudflare Workers runtime
+export { ManifestDO } from './durableObjects/ManifestDO';
+export { ProxyProjectUsageDO } from './durableObjects/ProxyProjectUsageDO';
+
+// Validate environment on Worker startup (cached across requests)
+let envValidated = false;
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		// Quick debug check
+		const url = new URL(request.url);
+		if (url.pathname === '/__debug__') {
+				return new Response(JSON.stringify({
+					path: url.pathname,
+					timestamp: new Date().toISOString(),
+					hasResourceProxySecret: !!env.RESOURCE_PROXY_SIGNING_SECRET,
+					enableResourceProxy: env.ENABLE_RESOURCE_PROXY,
+					featureFlags: env.FEATURE_FLAGS,
+					proxyBackend: (env.PROXY_STATS_BACKEND || 'kv').toLowerCase(),
+					hasProxyUsageDO: !!env.PROXY_USAGE_DO
+				}, null, 2), {
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+
+			if (url.pathname === '/__proxy_token__') {
+				const projectId = url.searchParams.get('project_id') || 'debug-project';
+				try {
+					const token = await createResourceProxyToken(projectId, env);
+					return new Response(JSON.stringify({ projectId, token }, null, 2), {
+						headers: { 'Content-Type': 'application/json' }
+					});
+				} catch (error) {
+					return new Response(JSON.stringify({
+						projectId,
+						error: error instanceof Error ? error.message : String(error),
+					}), {
+						status: 500,
+						headers: { 'Content-Type': 'application/json' }
+					});
+				}
+			}
+		
+		// Validate environment once per Worker instance
+		if (!envValidated) {
+			try {
+				validateAndLog(env);
+				envValidated = true;
+			} catch (error) {
+				console.error('[WORKER] Environment validation failed:', error);
+				return new Response(JSON.stringify({
+					error: 'CONFIGURATION_ERROR',
+					message: 'Worker environment misconfigured',
+					details: error instanceof Error ? error.message : String(error)
+				}), {
+					status: 500,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			}
+		}
+
 		// Use the organized router system
-		return await router(request, env);
+		return await router(request, env, ctx);
+	},
+
+	/**
+	 * Scheduled handler for cron triggers
+	 * Phase 3: Manifest drift detection runs daily at 3 AM UTC
+	 */
+	async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+		console.info('[WORKER] Scheduled event triggered', {
+			scheduledTime: new Date(controller.scheduledTime).toISOString(),
+			cron: controller.cron
+		});
+
+		// Convert ScheduledController to ScheduledEvent-like object for the handler
+		const event = {
+			scheduledTime: controller.scheduledTime,
+			cron: controller.cron
+		} as ScheduledEvent;
+
+		// Route to manifest drift check handler
+		ctx.waitUntil(handleManifestDriftCheck(event, env, ctx));
 	},
 
 	/**
