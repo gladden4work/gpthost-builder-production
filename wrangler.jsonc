@@ -51,7 +51,7 @@
         "GITHUB_REPOSITORY": "gladden4work/gpthost-build-test",
         "WORKER_URL": "https://gpthost-builder-production.gladden4work.workers.dev",
         "ALLOWED_ORIGINS": "https://gpthost.online,https://app.gpthost.online",
-        "FEATURE_FLAGS": "{\"useNewStorageService\":true,\"useNewProjectService\":true,\"useNewGitHubService\":true,\"useNewBuildService\":true,\"useNewDeployService\":true,\"useMonitoring\":true}",
+        "FEATURE_FLAGS": "{\"useNewStorageService\":true,\"useNewProjectService\":true,\"useNewGitHubService\":true,\"useNewBuildService\":true,\"useNewDeployService\":true,\"useMonitoring\":true,\"useResourceProxy\":true}",
         "ENABLE_EMERGENCY_ENDPOINTS": "false",
         "ENABLE_DEBUG_ENDPOINTS": "false"
 	},
