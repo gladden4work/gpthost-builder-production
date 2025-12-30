@@ -100,6 +100,22 @@
     }
   ],
   /**
+   * Durable Objects - For atomic manifest operations and proxy usage tracking
+   */
+  "durable_objects": {
+    "bindings": [
+      { "name": "MANIFEST_DO", "class_name": "ManifestDO" },
+      { "name": "PROXY_USAGE_DO", "class_name": "ProxyProjectUsageDO" }
+    ]
+  },
+  /**
+   * Durable Object Migrations - Required for first deployment
+   */
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["ManifestDO"] },
+    { "tag": "v2", "new_classes": ["ProxyProjectUsageDO"] }
+  ],
+  /**
    * Routes - Will be configured via DNS for subdomain routing
    * DISABLED FOR NOW: Causing error 1042 on workers.dev subdomain
    */
